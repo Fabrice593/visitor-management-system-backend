@@ -28,6 +28,8 @@ public class HostEmployeeController {
             return new ResponseEntity<>(message, HttpStatus.CREATED);
         } else if (message.endsWith("does not exist")) {
             return new ResponseEntity<>(message, HttpStatus.NOT_FOUND);
+        } else if (message.equals("That workstation is taken by another host employee")) {
+            return new ResponseEntity<>(message, HttpStatus.CONFLICT);
         } else {
             return new ResponseEntity<>(message, HttpStatus.BAD_REQUEST);
         }
@@ -41,8 +43,36 @@ public class HostEmployeeController {
             return new ResponseEntity<>(message, HttpStatus.OK);
         } else if (message.endsWith("does not exist")) {
             return new ResponseEntity<>(message, HttpStatus.NOT_FOUND);
+        } else if (message.equals("That workstation is taken by another host employee")) {
+            return new ResponseEntity<>(message, HttpStatus.CONFLICT);
         } else {
             return new ResponseEntity<>(message, HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    @PutMapping("/{id}/visit-purposes/{purposeId}")
+    public ResponseEntity<String> addVisitPurpose(@PathVariable UUID id, @PathVariable UUID purposeId) {
+        String message = hostEmployeeService.addVisitPurpose(id, purposeId);
+
+        if (message.equals("Visit purpose added to the host employee")) {
+            return new ResponseEntity<>(message, HttpStatus.OK);
+        } else if (message.endsWith("does not exist")) {
+            return new ResponseEntity<>(message, HttpStatus.NOT_FOUND);
+        } else {
+            return new ResponseEntity<>(message, HttpStatus.CONFLICT);
+        }
+    }
+
+    @PatchMapping("/{id}/workstation")
+    public ResponseEntity<String> changeWorkstation(@PathVariable UUID id, @RequestParam int stationNumber) {
+        String message = hostEmployeeService.changeWorkstation(id, stationNumber);
+
+        if (message.equals("Workstation changed successfully")) {
+            return new ResponseEntity<>(message, HttpStatus.OK);
+        } else if (message.endsWith("does not exist")) {
+            return new ResponseEntity<>(message, HttpStatus.NOT_FOUND);
+        } else {
+            return new ResponseEntity<>(message, HttpStatus.CONFLICT);
         }
     }
 

@@ -19,5 +19,7 @@ public interface HostEmployeeRepository extends JpaRepository<HostEmployee, UUID
 
     boolean existsByWorkstationId(UUID workstationId);
 
+    boolean existsByWorkstationIdAndIdNot(UUID workstationId, UUID id);
+
     boolean existsByVisitPurposesId(UUID visitPurposeId);
 }

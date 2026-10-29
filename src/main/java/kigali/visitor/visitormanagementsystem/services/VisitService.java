@@ -38,12 +38,17 @@ public class VisitService {
             return message;
         }
 
-        visit.setId(null);
-
-        if (visit.getStatus() == null) {
-            visit.setStatus(VisitStatus.EXPECTED);
+        if (visit.getVisitDate().isBefore(LocalDate.now())) {
+            return "Visit date cannot be in the past";
         }
 
+        if (visitRepository.existsByHostEmployeeIdAndVisitDateAndStatusNot(
+                visit.getHostEmployee().getId(), visit.getVisitDate(), VisitStatus.DENIED)) {
+            return "Host employee already receives a visitor on that date";
+        }
+
+        visit.setId(null);
+        visit.setStatus(VisitStatus.EXPECTED);
         visitRepository.save(visit);
 
         return "Visit saved successfully";
@@ -64,6 +69,20 @@ public class VisitService {
             return message;
         }
 
+        boolean changesSchedule = !existing.getVisitDate().equals(visit.getVisitDate())
+                || !existing.getHostEmployee().getId().equals(visit.getHostEmployee().getId());
+
+        if (changesSchedule && existing.getStatus() != VisitStatus.DENIED) {
+            if (visit.getVisitDate().isBefore(LocalDate.now())) {
+                return "Visit date cannot be in the past";
+            }
+
+            if (visitRepository.existsByHostEmployeeIdAndVisitDateAndStatusNotAndIdNot(
+                    visit.getHostEmployee().getId(), visit.getVisitDate(), VisitStatus.DENIED, id)) {
+                return "Host employee already receives a visitor on that date";
+            }
+        }
+
         existing.setVisitDate(visit.getVisitDate());
         existing.setPurposeNote(visit.getPurposeNote());
         existing.setVisitor(visit.getVisitor());
@@ -71,6 +90,36 @@ public class VisitService {
         visitRepository.save(existing);
 
         return "Visit updated successfully";
+    }
+
+    @Transactional
+    public String changeStatus(UUID id, VisitStatus status) {
+        Visit visit = visitRepository.findById(id).orElse(null);
+
+        if (visit == null) {
+            return "The visit with that id does not exist";
+        }
+
+        if (!canChangeStatus(visit.getStatus(), status)) {
+            return "Cannot change status from " + visit.getStatus() + " to " + status;
+        }
+
+        visit.setStatus(status);
+        visitRepository.save(visit);
+
+        return "Visit status updated successfully";
+    }
+
+    private boolean canChangeStatus(VisitStatus currentStatus, VisitStatus newStatus) {
+        if (currentStatus == VisitStatus.EXPECTED) {
+            return newStatus == VisitStatus.CHECKED_IN || newStatus == VisitStatus.DENIED;
+        }
+
+        if (currentStatus == VisitStatus.CHECKED_IN) {
+            return newStatus == VisitStatus.CHECKED_OUT || newStatus == VisitStatus.DENIED;
+        }
+
+        return false;
     }
 
     public List<Visit> getAllVisits() {

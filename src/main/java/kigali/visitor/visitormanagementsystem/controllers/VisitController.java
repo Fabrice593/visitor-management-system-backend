@@ -31,6 +31,8 @@ public class VisitController {
             return new ResponseEntity<>(message, HttpStatus.CREATED);
         } else if (message.endsWith("does not exist")) {
             return new ResponseEntity<>(message, HttpStatus.NOT_FOUND);
+        } else if (message.equals("Host employee already receives a visitor on that date")) {
+            return new ResponseEntity<>(message, HttpStatus.CONFLICT);
         } else {
             return new ResponseEntity<>(message, HttpStatus.BAD_REQUEST);
         }
@@ -43,6 +45,21 @@ public class VisitController {
         if (message.equals("Visit updated successfully")) {
             return new ResponseEntity<>(message, HttpStatus.OK);
         } else if (message.endsWith("does not exist")) {
+            return new ResponseEntity<>(message, HttpStatus.NOT_FOUND);
+        } else if (message.equals("Host employee already receives a visitor on that date")) {
+            return new ResponseEntity<>(message, HttpStatus.CONFLICT);
+        } else {
+            return new ResponseEntity<>(message, HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<String> changeStatus(@PathVariable UUID id, @RequestParam VisitStatus status) {
+        String message = visitService.changeStatus(id, status);
+
+        if (message.equals("Visit status updated successfully")) {
+            return new ResponseEntity<>(message, HttpStatus.OK);
+        } else if (message.equals("The visit with that id does not exist")) {
             return new ResponseEntity<>(message, HttpStatus.NOT_FOUND);
         } else {
             return new ResponseEntity<>(message, HttpStatus.BAD_REQUEST);

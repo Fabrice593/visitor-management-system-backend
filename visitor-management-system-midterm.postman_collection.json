@@ -1742,6 +1742,26 @@
           ]
         },
         {
+          "name": "Setup - Deny visit on day 3",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/{{bVisit3}}/status?status=DENIED"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit status updated successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "B2",
           "request": {
             "method": "GET",
@@ -3324,6 +3344,2594 @@
             "method": "DELETE",
             "header": [],
             "url": "{{baseUrl}}/api/visit-purposes/delete/{{cPurpose2}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit purpose deleted successfully\"); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Part D - Business rules",
+      "description": "Run in order on a disposable database. Covers D1 to D4, all 16 status transition pairs, update protection and cleanup. Uses station numbers 901 to 903.",
+      "item": [
+        {
+          "name": "Setup - Create workstation 901",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/workstations/save",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"stationNumber\": 901,\n  \"name\": \"PartD-Station-0-{{dRunId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set(\"dRunId\", pm.variables.replaceIn(\"{{$guid}}\"));",
+                  "pm.collectionVariables.set(\"dMissingId\", pm.variables.replaceIn(\"{{$guid}}\"));",
+                  "for (let offset = -1; offset < 5; offset++) { const date = new Date(); date.setDate(date.getDate() + offset); pm.collectionVariables.set(\"dDate\" + offset, date.getFullYear() + \"-\" + String(date.getMonth() + 1).padStart(2, \"0\") + \"-\" + String(date.getDate()).padStart(2, \"0\")); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Workstation saved successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Create workstation 902",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/workstations/save",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"stationNumber\": 902,\n  \"name\": \"PartD-Station-1-{{dRunId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Workstation saved successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Create workstation 903",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/workstations/save",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"stationNumber\": 903,\n  \"name\": \"PartD-Station-2-{{dRunId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Workstation saved successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Capture workstations IDs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/workstations/all"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "for (let index = 0; index < 3; index++) { const record = pm.response.json().find(row => row.name === \"PartD-Station-\" + index + \"-\" + pm.collectionVariables.get(\"dRunId\")); pm.test(\"Fixture \" + index + \" exists\", function () { pm.expect(record).to.be.an(\"object\"); }); if (record) pm.collectionVariables.set(\"dStation\" + index, record.id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Create purpose 0",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/visit-purposes/save",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"PartD-Purpose-0-{{dRunId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit purpose saved successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Create purpose 1",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/visit-purposes/save",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"PartD-Purpose-1-{{dRunId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit purpose saved successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Capture visit-purposes IDs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visit-purposes/all"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "for (let index = 0; index < 2; index++) { const record = pm.response.json().find(row => row.name === \"PartD-Purpose-\" + index + \"-\" + pm.collectionVariables.get(\"dRunId\")); pm.test(\"Fixture \" + index + \" exists\", function () { pm.expect(record).to.be.an(\"object\"); }); if (record) pm.collectionVariables.set(\"dPurpose\" + index, record.id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Create host 0",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/host-employees/save",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"PartD\",\n  \"lastName\": \"Host0\",\n  \"email\": \"partd-0-{{dRunId}}@example.com\",\n  \"workstation\": {\n    \"id\": \"{{dStation0}}\"\n  },\n  \"visitPurposes\": [\n    {\n      \"id\": \"{{dPurpose0}}\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Host employee saved successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Create host 1",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/host-employees/save",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"PartD\",\n  \"lastName\": \"Host1\",\n  \"email\": \"partd-1-{{dRunId}}@example.com\",\n  \"workstation\": {\n    \"id\": \"{{dStation1}}\"\n  },\n  \"visitPurposes\": [\n    {\n      \"id\": \"{{dPurpose0}}\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Host employee saved successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Capture host-employees IDs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/host-employees/all"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "for (let index = 0; index < 2; index++) { const record = pm.response.json().find(row => row.email === \"partd-\" + index + \"-\" + pm.collectionVariables.get(\"dRunId\") + \"@example.com\"); pm.test(\"Fixture \" + index + \" exists\", function () { pm.expect(record).to.be.an(\"object\"); }); if (record) pm.collectionVariables.set(\"dHost\" + index, record.id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Create visitor",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/visitors/save",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"PartD\",\n  \"lastName\": \"Visitor\",\n  \"idNumber\": \"D-{{dRunId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visitor saved successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Capture visitors IDs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visitors/all"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "for (let index = 0; index < 1; index++) { const record = pm.response.json().find(row => row.idNumber === \"D-\" + pm.collectionVariables.get(\"dRunId\")); pm.test(\"Fixture \" + index + \" exists\", function () { pm.expect(record).to.be.an(\"object\"); }); if (record) pm.collectionVariables.set(\"dVisitor\" + index, record.id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D1 - Past date rejected",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/visits/save",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"visitDate\": \"{{dDate-1}}\",\n  \"status\": \"DENIED\",\n  \"purposeNote\": \"PartD-99-{{dRunId}}\",\n  \"visitor\": {\n    \"id\": \"{{dVisitor0}}\"\n  },\n  \"hostEmployee\": {\n    \"id\": \"{{dHost0}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit date cannot be in the past\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D1",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/visits/save",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"visitDate\": \"{{dDate0}}\",\n  \"status\": \"DENIED\",\n  \"purposeNote\": \"PartD-0-{{dRunId}}\",\n  \"visitor\": {\n    \"id\": \"{{dVisitor0}}\"\n  },\n  \"hostEmployee\": {\n    \"id\": \"{{dHost0}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit saved successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Capture visit 0",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/all"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "const record = pm.response.json().find(row => row.purposeNote === \"PartD-0-\" + pm.collectionVariables.get(\"dRunId\"));",
+                  "pm.test(\"New visit is EXPECTED regardless of request status\", function () { pm.expect(record).to.be.an(\"object\"); pm.expect(record.status).to.eql(\"EXPECTED\"); });",
+                  "if (record) pm.collectionVariables.set(\"dVisit0\", record.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D1 - EXPECTED visit blocks same host and date",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/visits/save",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"visitDate\": \"{{dDate0}}\",\n  \"status\": \"DENIED\",\n  \"purposeNote\": \"PartD-99-{{dRunId}}\",\n  \"visitor\": {\n    \"id\": \"{{dVisitor0}}\"\n  },\n  \"hostEmployee\": {\n    \"id\": \"{{dHost0}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 409\", function () { pm.response.to.have.status(409); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Host employee already receives a visitor on that date\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D1 - Different host on same date allowed",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/visits/save",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"visitDate\": \"{{dDate0}}\",\n  \"status\": \"DENIED\",\n  \"purposeNote\": \"PartD-1-{{dRunId}}\",\n  \"visitor\": {\n    \"id\": \"{{dVisitor0}}\"\n  },\n  \"hostEmployee\": {\n    \"id\": \"{{dHost1}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit saved successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Capture visit 1",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/all"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "const record = pm.response.json().find(row => row.purposeNote === \"PartD-1-\" + pm.collectionVariables.get(\"dRunId\"));",
+                  "pm.test(\"New visit is EXPECTED regardless of request status\", function () { pm.expect(record).to.be.an(\"object\"); pm.expect(record.status).to.eql(\"EXPECTED\"); });",
+                  "if (record) pm.collectionVariables.set(\"dVisit1\", record.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D2 - PUT cannot set status",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/visits/update/{{dVisit0}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"visitDate\": \"{{dDate0}}\",\n  \"status\": \"CHECKED_OUT\",\n  \"purposeNote\": \"PartD-0-{{dRunId}}\",\n  \"visitor\": {\n    \"id\": \"{{dVisitor0}}\"\n  },\n  \"hostEmployee\": {\n    \"id\": \"{{dHost0}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit updated successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D1 - Confirm schedule and status persisted",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/{{dVisit0}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Schedule and status were preserved\", function () { const row = pm.response.json(); pm.expect(row.visitDate).to.eql(pm.collectionVariables.get(\"dDate0\")); pm.expect(row.status).to.eql(\"EXPECTED\"); pm.expect(row.hostEmployee.id).to.eql(pm.collectionVariables.get(\"dHost0\")); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D2 - EXPECTED to EXPECTED",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/{{dVisit0}}/status?status=EXPECTED"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Cannot change status from EXPECTED to EXPECTED\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D2 - Confirm EXPECTED persists",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/{{dVisit0}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Stored status is correct\", function () { pm.expect(pm.response.json().status).to.eql(\"EXPECTED\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D2 - EXPECTED to CHECKED_OUT",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/{{dVisit0}}/status?status=CHECKED_OUT"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Cannot change status from EXPECTED to CHECKED_OUT\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D2 - Confirm EXPECTED persists",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/{{dVisit0}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Stored status is correct\", function () { pm.expect(pm.response.json().status).to.eql(\"EXPECTED\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D2",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/{{dVisit0}}/status?status=CHECKED_IN"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit status updated successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D2 - Confirm CHECKED_IN persists",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/{{dVisit0}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Stored status is correct\", function () { pm.expect(pm.response.json().status).to.eql(\"CHECKED_IN\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D1 - CHECKED_IN visit blocks same host and date",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/visits/save",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"visitDate\": \"{{dDate0}}\",\n  \"status\": \"DENIED\",\n  \"purposeNote\": \"PartD-99-{{dRunId}}\",\n  \"visitor\": {\n    \"id\": \"{{dVisitor0}}\"\n  },\n  \"hostEmployee\": {\n    \"id\": \"{{dHost0}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 409\", function () { pm.response.to.have.status(409); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Host employee already receives a visitor on that date\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D2 - CHECKED_IN to EXPECTED",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/{{dVisit0}}/status?status=EXPECTED"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Cannot change status from CHECKED_IN to EXPECTED\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D2 - Confirm CHECKED_IN persists",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/{{dVisit0}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Stored status is correct\", function () { pm.expect(pm.response.json().status).to.eql(\"CHECKED_IN\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D2 - CHECKED_IN to CHECKED_IN",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/{{dVisit0}}/status?status=CHECKED_IN"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Cannot change status from CHECKED_IN to CHECKED_IN\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D2 - Confirm CHECKED_IN persists",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/{{dVisit0}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Stored status is correct\", function () { pm.expect(pm.response.json().status).to.eql(\"CHECKED_IN\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D2 - CHECKED_IN to CHECKED_OUT",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/{{dVisit0}}/status?status=CHECKED_OUT"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit status updated successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D2 - Confirm CHECKED_OUT persists",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/{{dVisit0}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Stored status is correct\", function () { pm.expect(pm.response.json().status).to.eql(\"CHECKED_OUT\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D2 - CHECKED_OUT to EXPECTED",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/{{dVisit0}}/status?status=EXPECTED"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Cannot change status from CHECKED_OUT to EXPECTED\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D2 - Confirm CHECKED_OUT persists",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/{{dVisit0}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Stored status is correct\", function () { pm.expect(pm.response.json().status).to.eql(\"CHECKED_OUT\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D2 - CHECKED_OUT to CHECKED_IN",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/{{dVisit0}}/status?status=CHECKED_IN"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Cannot change status from CHECKED_OUT to CHECKED_IN\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D2 - Confirm CHECKED_OUT persists",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/{{dVisit0}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Stored status is correct\", function () { pm.expect(pm.response.json().status).to.eql(\"CHECKED_OUT\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D2 - CHECKED_OUT to CHECKED_OUT",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/{{dVisit0}}/status?status=CHECKED_OUT"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Cannot change status from CHECKED_OUT to CHECKED_OUT\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D2 - Confirm CHECKED_OUT persists",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/{{dVisit0}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Stored status is correct\", function () { pm.expect(pm.response.json().status).to.eql(\"CHECKED_OUT\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D2 - CHECKED_OUT to DENIED",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/{{dVisit0}}/status?status=DENIED"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Cannot change status from CHECKED_OUT to DENIED\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D2 - Confirm CHECKED_OUT persists",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/{{dVisit0}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Stored status is correct\", function () { pm.expect(pm.response.json().status).to.eql(\"CHECKED_OUT\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D1 - CHECKED_OUT visit still blocks the date",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/visits/save",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"visitDate\": \"{{dDate0}}\",\n  \"status\": \"DENIED\",\n  \"purposeNote\": \"PartD-99-{{dRunId}}\",\n  \"visitor\": {\n    \"id\": \"{{dVisitor0}}\"\n  },\n  \"hostEmployee\": {\n    \"id\": \"{{dHost0}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 409\", function () { pm.response.to.have.status(409); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Host employee already receives a visitor on that date\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D2 - PUT preserves terminal CHECKED_OUT",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/visits/update/{{dVisit0}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"visitDate\": \"{{dDate0}}\",\n  \"status\": \"DENIED\",\n  \"purposeNote\": \"PartD-0-{{dRunId}}\",\n  \"visitor\": {\n    \"id\": \"{{dVisitor0}}\"\n  },\n  \"hostEmployee\": {\n    \"id\": \"{{dHost0}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit updated successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D1 - Confirm schedule and status persisted",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/{{dVisit0}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Schedule and status were preserved\", function () { const row = pm.response.json(); pm.expect(row.visitDate).to.eql(pm.collectionVariables.get(\"dDate0\")); pm.expect(row.status).to.eql(\"CHECKED_OUT\"); pm.expect(row.hostEmployee.id).to.eql(pm.collectionVariables.get(\"dHost0\")); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Create visit 2",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/visits/save",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"visitDate\": \"{{dDate1}}\",\n  \"status\": \"DENIED\",\n  \"purposeNote\": \"PartD-2-{{dRunId}}\",\n  \"visitor\": {\n    \"id\": \"{{dVisitor0}}\"\n  },\n  \"hostEmployee\": {\n    \"id\": \"{{dHost0}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit saved successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Capture visit 2",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/all"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "const record = pm.response.json().find(row => row.purposeNote === \"PartD-2-\" + pm.collectionVariables.get(\"dRunId\"));",
+                  "pm.test(\"New visit is EXPECTED regardless of request status\", function () { pm.expect(record).to.be.an(\"object\"); pm.expect(record.status).to.eql(\"EXPECTED\"); });",
+                  "if (record) pm.collectionVariables.set(\"dVisit2\", record.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D2 - EXPECTED to DENIED",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/{{dVisit2}}/status?status=DENIED"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit status updated successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D2 - Confirm DENIED persists",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/{{dVisit2}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Stored status is correct\", function () { pm.expect(pm.response.json().status).to.eql(\"DENIED\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D2 - DENIED to EXPECTED",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/{{dVisit2}}/status?status=EXPECTED"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Cannot change status from DENIED to EXPECTED\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D2 - Confirm DENIED persists",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/{{dVisit2}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Stored status is correct\", function () { pm.expect(pm.response.json().status).to.eql(\"DENIED\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D2 - DENIED to CHECKED_IN",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/{{dVisit2}}/status?status=CHECKED_IN"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Cannot change status from DENIED to CHECKED_IN\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D2 - Confirm DENIED persists",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/{{dVisit2}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Stored status is correct\", function () { pm.expect(pm.response.json().status).to.eql(\"DENIED\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D2 - DENIED to CHECKED_OUT",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/{{dVisit2}}/status?status=CHECKED_OUT"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Cannot change status from DENIED to CHECKED_OUT\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D2 - Confirm DENIED persists",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/{{dVisit2}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Stored status is correct\", function () { pm.expect(pm.response.json().status).to.eql(\"DENIED\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D2 - DENIED to DENIED",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/{{dVisit2}}/status?status=DENIED"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Cannot change status from DENIED to DENIED\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D2 - Confirm DENIED persists",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/{{dVisit2}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Stored status is correct\", function () { pm.expect(pm.response.json().status).to.eql(\"DENIED\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D2 - PUT preserves terminal DENIED",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/visits/update/{{dVisit2}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"visitDate\": \"{{dDate1}}\",\n  \"status\": \"EXPECTED\",\n  \"purposeNote\": \"PartD-2-{{dRunId}}\",\n  \"visitor\": {\n    \"id\": \"{{dVisitor0}}\"\n  },\n  \"hostEmployee\": {\n    \"id\": \"{{dHost0}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit updated successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D1 - Confirm schedule and status persisted",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/{{dVisit2}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Schedule and status were preserved\", function () { const row = pm.response.json(); pm.expect(row.visitDate).to.eql(pm.collectionVariables.get(\"dDate1\")); pm.expect(row.status).to.eql(\"DENIED\"); pm.expect(row.hostEmployee.id).to.eql(pm.collectionVariables.get(\"dHost0\")); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D1 - DENIED visit does not block replacement",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/visits/save",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"visitDate\": \"{{dDate1}}\",\n  \"status\": \"DENIED\",\n  \"purposeNote\": \"PartD-3-{{dRunId}}\",\n  \"visitor\": {\n    \"id\": \"{{dVisitor0}}\"\n  },\n  \"hostEmployee\": {\n    \"id\": \"{{dHost0}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit saved successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Capture visit 3",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/all"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "const record = pm.response.json().find(row => row.purposeNote === \"PartD-3-\" + pm.collectionVariables.get(\"dRunId\"));",
+                  "pm.test(\"New visit is EXPECTED regardless of request status\", function () { pm.expect(record).to.be.an(\"object\"); pm.expect(record.status).to.eql(\"EXPECTED\"); });",
+                  "if (record) pm.collectionVariables.set(\"dVisit3\", record.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Create visit 4",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/visits/save",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"visitDate\": \"{{dDate2}}\",\n  \"status\": \"DENIED\",\n  \"purposeNote\": \"PartD-4-{{dRunId}}\",\n  \"visitor\": {\n    \"id\": \"{{dVisitor0}}\"\n  },\n  \"hostEmployee\": {\n    \"id\": \"{{dHost0}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit saved successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Capture visit 4",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/all"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "const record = pm.response.json().find(row => row.purposeNote === \"PartD-4-\" + pm.collectionVariables.get(\"dRunId\"));",
+                  "pm.test(\"New visit is EXPECTED regardless of request status\", function () { pm.expect(record).to.be.an(\"object\"); pm.expect(record.status).to.eql(\"EXPECTED\"); });",
+                  "if (record) pm.collectionVariables.set(\"dVisit4\", record.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D2 - EXPECTED to CHECKED_IN",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/{{dVisit4}}/status?status=CHECKED_IN"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit status updated successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D2 - Confirm CHECKED_IN persists",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/{{dVisit4}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Stored status is correct\", function () { pm.expect(pm.response.json().status).to.eql(\"CHECKED_IN\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D2 - CHECKED_IN to DENIED",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/{{dVisit4}}/status?status=DENIED"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit status updated successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D2 - Confirm DENIED persists",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/{{dVisit4}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Stored status is correct\", function () { pm.expect(pm.response.json().status).to.eql(\"DENIED\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D1 - PUT cannot move a visit to an occupied date",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/visits/update/{{dVisit3}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"visitDate\": \"{{dDate0}}\",\n  \"status\": \"DENIED\",\n  \"purposeNote\": \"PartD-3-{{dRunId}}\",\n  \"visitor\": {\n    \"id\": \"{{dVisitor0}}\"\n  },\n  \"hostEmployee\": {\n    \"id\": \"{{dHost0}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 409\", function () { pm.response.to.have.status(409); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Host employee already receives a visitor on that date\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D1 - Confirm schedule and status persisted",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/{{dVisit3}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Schedule and status were preserved\", function () { const row = pm.response.json(); pm.expect(row.visitDate).to.eql(pm.collectionVariables.get(\"dDate1\")); pm.expect(row.status).to.eql(\"EXPECTED\"); pm.expect(row.hostEmployee.id).to.eql(pm.collectionVariables.get(\"dHost0\")); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D1 - PUT cannot move a visit into the past",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/visits/update/{{dVisit3}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"visitDate\": \"{{dDate-1}}\",\n  \"status\": \"DENIED\",\n  \"purposeNote\": \"PartD-3-{{dRunId}}\",\n  \"visitor\": {\n    \"id\": \"{{dVisitor0}}\"\n  },\n  \"hostEmployee\": {\n    \"id\": \"{{dHost0}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit date cannot be in the past\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D1 - Confirm schedule and status persisted",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/{{dVisit3}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Schedule and status were preserved\", function () { const row = pm.response.json(); pm.expect(row.visitDate).to.eql(pm.collectionVariables.get(\"dDate1\")); pm.expect(row.status).to.eql(\"EXPECTED\"); pm.expect(row.hostEmployee.id).to.eql(pm.collectionVariables.get(\"dHost0\")); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D1 - PUT cannot move to another occupied host",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/visits/update/{{dVisit3}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"visitDate\": \"{{dDate0}}\",\n  \"status\": \"DENIED\",\n  \"purposeNote\": \"PartD-3-{{dRunId}}\",\n  \"visitor\": {\n    \"id\": \"{{dVisitor0}}\"\n  },\n  \"hostEmployee\": {\n    \"id\": \"{{dHost1}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 409\", function () { pm.response.to.have.status(409); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Host employee already receives a visitor on that date\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D1 - Confirm schedule and status persisted",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/{{dVisit3}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Schedule and status were preserved\", function () { const row = pm.response.json(); pm.expect(row.visitDate).to.eql(pm.collectionVariables.get(\"dDate1\")); pm.expect(row.status).to.eql(\"EXPECTED\"); pm.expect(row.hostEmployee.id).to.eql(pm.collectionVariables.get(\"dHost0\")); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D1 - PUT can move to a free date",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/visits/update/{{dVisit3}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"visitDate\": \"{{dDate3}}\",\n  \"status\": \"DENIED\",\n  \"purposeNote\": \"PartD-3-{{dRunId}}\",\n  \"visitor\": {\n    \"id\": \"{{dVisitor0}}\"\n  },\n  \"hostEmployee\": {\n    \"id\": \"{{dHost0}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit updated successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D1 - Confirm schedule and status persisted",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/{{dVisit3}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Schedule and status were preserved\", function () { const row = pm.response.json(); pm.expect(row.visitDate).to.eql(pm.collectionVariables.get(\"dDate3\")); pm.expect(row.status).to.eql(\"EXPECTED\"); pm.expect(row.hostEmployee.id).to.eql(pm.collectionVariables.get(\"dHost0\")); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D2 - Unknown visit",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/{{dMissingId}}/status?status=CHECKED_IN"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 404\", function () { pm.response.to.have.status(404); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"The visit with that id does not exist\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D2 - Invalid status",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/{{dVisit3}}/status?status=UNKNOWN"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D2 - Status parameter required",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/{{dVisit3}}/status"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D3",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": "{{baseUrl}}/api/host-employees/{{dHost0}}/visit-purposes/{{dPurpose1}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit purpose added to the host employee\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D3 - Existing purpose preserved",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/host-employees/{{dHost0}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Both purposes are linked exactly once\", function () { const ids = pm.response.json().visitPurposes.map(row => row.id).sort(); pm.expect(JSON.stringify(ids)).to.eql(JSON.stringify([pm.collectionVariables.get(\"dPurpose0\"), pm.collectionVariables.get(\"dPurpose1\")].sort())); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D3 - Duplicate association rejected",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": "{{baseUrl}}/api/host-employees/{{dHost0}}/visit-purposes/{{dPurpose1}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 409\", function () { pm.response.to.have.status(409); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"The host employee already has that visit purpose\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D3 - No duplicate link persisted",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/host-employees/{{dHost0}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Both purposes are linked exactly once\", function () { const ids = pm.response.json().visitPurposes.map(row => row.id).sort(); pm.expect(JSON.stringify(ids)).to.eql(JSON.stringify([pm.collectionVariables.get(\"dPurpose0\"), pm.collectionVariables.get(\"dPurpose1\")].sort())); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D3 - Unknown host",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": "{{baseUrl}}/api/host-employees/{{dMissingId}}/visit-purposes/{{dPurpose1}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 404\", function () { pm.response.to.have.status(404); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"The host employee with that id does not exist\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D3 - Unknown purpose",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": "{{baseUrl}}/api/host-employees/{{dHost0}}/visit-purposes/{{dMissingId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 404\", function () { pm.response.to.have.status(404); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"The visit purpose with that id does not exist\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D4 - Occupied workstation rejected",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": "{{baseUrl}}/api/host-employees/{{dHost0}}/workstation?stationNumber=902"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 409\", function () { pm.response.to.have.status(409); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"That workstation is taken by another host employee\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D4 - Failed move preserves assignment",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/host-employees/{{dHost0}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Original workstation is retained\", function () { pm.expect(pm.response.json().workstation.id).to.eql(pm.collectionVariables.get(\"dStation0\")); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D4 - Same workstation is allowed",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": "{{baseUrl}}/api/host-employees/{{dHost0}}/workstation?stationNumber=901"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Workstation changed successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D4 - Unknown host",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": "{{baseUrl}}/api/host-employees/{{dMissingId}}/workstation?stationNumber=903"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 404\", function () { pm.response.to.have.status(404); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"The host employee with that id does not exist\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D4 - Unknown workstation",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": "{{baseUrl}}/api/host-employees/{{dHost0}}/workstation?stationNumber=-999999"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 404\", function () { pm.response.to.have.status(404); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"The workstation with that station number does not exist\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D4 - Invalid station number",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": "{{baseUrl}}/api/host-employees/{{dHost0}}/workstation?stationNumber=invalid"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D4 - Station number required",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": "{{baseUrl}}/api/host-employees/{{dHost0}}/workstation"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D4",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": "{{baseUrl}}/api/host-employees/{{dHost0}}/workstation?stationNumber=903"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Workstation changed successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D4 - Destination and purposes persisted",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/host-employees/{{dHost0}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Both purposes are linked exactly once\", function () { const ids = pm.response.json().visitPurposes.map(row => row.id).sort(); pm.expect(JSON.stringify(ids)).to.eql(JSON.stringify([pm.collectionVariables.get(\"dPurpose0\"), pm.collectionVariables.get(\"dPurpose1\")].sort())); });",
+                  "pm.test(\"Destination workstation is assigned\", function () { pm.expect(pm.response.json().workstation.id).to.eql(pm.collectionVariables.get(\"dStation2\")); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D4 - Old workstation is free",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/workstations/free"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Old station is free and destination is occupied\", function () { const ids = pm.response.json().map(row => row.id); pm.expect(ids.includes(pm.collectionVariables.get(\"dStation0\"))).to.eql(true); pm.expect(ids.includes(pm.collectionVariables.get(\"dStation2\"))).to.eql(false); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D4 - Create cannot take occupied workstation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/host-employees/save",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"PartD\",\n  \"lastName\": \"Host99\",\n  \"email\": \"partd-99-{{dRunId}}@example.com\",\n  \"workstation\": {\n    \"id\": \"{{dStation2}}\"\n  },\n  \"visitPurposes\": [\n    {\n      \"id\": \"{{dPurpose0}}\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 409\", function () { pm.response.to.have.status(409); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"That workstation is taken by another host employee\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D4 - PUT cannot take occupied workstation",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/host-employees/update/{{dHost1}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"PartD\",\n  \"lastName\": \"Host1\",\n  \"email\": \"partd-1-{{dRunId}}@example.com\",\n  \"workstation\": {\n    \"id\": \"{{dStation2}}\"\n  },\n  \"visitPurposes\": [\n    {\n      \"id\": \"{{dPurpose0}}\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 409\", function () { pm.response.to.have.status(409); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"That workstation is taken by another host employee\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D4 - Failed PUT preserves assignment",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/host-employees/{{dHost1}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Other host retains its workstation\", function () { pm.expect(pm.response.json().workstation.id).to.eql(pm.collectionVariables.get(\"dStation1\")); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D4 - Old workstation can be reused",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": "{{baseUrl}}/api/host-employees/{{dHost1}}/workstation?stationNumber=901"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Workstation changed successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cleanup - Delete visits fixture 0",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/delete/{{dVisit0}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit deleted successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cleanup - Delete visits fixture 1",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/delete/{{dVisit1}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit deleted successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cleanup - Delete visits fixture 2",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/delete/{{dVisit2}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit deleted successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cleanup - Delete visits fixture 3",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/delete/{{dVisit3}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit deleted successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cleanup - Delete visits fixture 4",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/delete/{{dVisit4}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit deleted successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cleanup - Delete host-employees fixture 0",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/host-employees/delete/{{dHost0}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Host employee deleted successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cleanup - Delete host-employees fixture 1",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/host-employees/delete/{{dHost1}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Host employee deleted successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cleanup - Delete visitors fixture 0",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/visitors/delete/{{dVisitor0}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visitor deleted successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cleanup - Delete workstations fixture 0",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/workstations/delete/{{dStation0}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Workstation deleted successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cleanup - Delete workstations fixture 1",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/workstations/delete/{{dStation1}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Workstation deleted successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cleanup - Delete workstations fixture 2",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/workstations/delete/{{dStation2}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Workstation deleted successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cleanup - Delete visit-purposes fixture 0",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/visit-purposes/delete/{{dPurpose0}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit purpose deleted successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cleanup - Delete visit-purposes fixture 1",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/visit-purposes/delete/{{dPurpose1}}"
           },
           "event": [
             {

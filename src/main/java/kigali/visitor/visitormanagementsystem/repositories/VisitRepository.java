@@ -17,6 +17,12 @@ public interface VisitRepository extends JpaRepository<Visit, UUID> {
 
     List<Visit> findByVisitDateBetweenOrderByVisitDateAsc(LocalDate start, LocalDate end);
 
+    boolean existsByHostEmployeeIdAndVisitDateAndStatusNot(
+            UUID hostEmployeeId, LocalDate visitDate, VisitStatus status);
+
+    boolean existsByHostEmployeeIdAndVisitDateAndStatusNotAndIdNot(
+            UUID hostEmployeeId, LocalDate visitDate, VisitStatus status, UUID id);
+
     boolean existsByVisitorId(UUID visitorId);
 
     boolean existsByHostEmployeeId(UUID hostEmployeeId);

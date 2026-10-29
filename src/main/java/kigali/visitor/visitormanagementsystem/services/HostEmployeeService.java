@@ -35,7 +35,7 @@ public class HostEmployeeService {
     @Transactional
     public String saveHostEmployee(HostEmployee hostEmployee) {
 
-        String message = validateHostEmployee(hostEmployee);
+        String message = validateHostEmployee(hostEmployee, null);
 
         if (message != null) {
             return message;
@@ -56,7 +56,7 @@ public class HostEmployeeService {
             return "The host employee with that id does not exist";
         }
 
-        String message = validateHostEmployee(hostEmployee);
+        String message = validateHostEmployee(hostEmployee, id);
 
         if (message != null) {
             return message;
@@ -102,7 +102,55 @@ public class HostEmployeeService {
         return "Host employee deleted successfully";
     }
 
-    private String validateHostEmployee(HostEmployee hostEmployee) {
+    @Transactional
+    public String addVisitPurpose(UUID id, UUID purposeId) {
+        HostEmployee hostEmployee = hostEmployeeRepository.findById(id).orElse(null);
+
+        if (hostEmployee == null) {
+            return "The host employee with that id does not exist";
+        }
+
+        VisitPurpose visitPurpose = visitPurposeRepository.findById(purposeId).orElse(null);
+
+        if (visitPurpose == null) {
+            return "The visit purpose with that id does not exist";
+        }
+
+        if (hostEmployee.getVisitPurposes().contains(visitPurpose)) {
+            return "The host employee already has that visit purpose";
+        }
+
+        hostEmployee.getVisitPurposes().add(visitPurpose);
+        hostEmployeeRepository.save(hostEmployee);
+
+        return "Visit purpose added to the host employee";
+    }
+
+    @Transactional
+    public String changeWorkstation(UUID id, int stationNumber) {
+        HostEmployee hostEmployee = hostEmployeeRepository.findById(id).orElse(null);
+
+        if (hostEmployee == null) {
+            return "The host employee with that id does not exist";
+        }
+
+        Workstation workstation = workstationRepository.findByStationNumber(stationNumber).orElse(null);
+
+        if (workstation == null) {
+            return "The workstation with that station number does not exist";
+        }
+
+        if (hostEmployeeRepository.existsByWorkstationIdAndIdNot(workstation.getId(), id)) {
+            return "That workstation is taken by another host employee";
+        }
+
+        hostEmployee.setWorkstation(workstation);
+        hostEmployeeRepository.save(hostEmployee);
+
+        return "Workstation changed successfully";
+    }
+
+    private String validateHostEmployee(HostEmployee hostEmployee, UUID id) {
 
         if (hostEmployee.getFirstName() == null || hostEmployee.getFirstName().isBlank()) {
             return "Host employee first name is required";
@@ -125,6 +173,14 @@ public class HostEmployeeService {
 
             if (workstation == null) {
                 return "The workstation with that id does not exist";
+            }
+
+            boolean taken = id == null
+                    ? hostEmployeeRepository.existsByWorkstationId(workstation.getId())
+                    : hostEmployeeRepository.existsByWorkstationIdAndIdNot(workstation.getId(), id);
+
+            if (taken) {
+                return "That workstation is taken by another host employee";
             }
 
             hostEmployee.setWorkstation(workstation);
