@@ -134,11 +134,17 @@ public class HostEmployeeService {
             return "The host employee with that id does not exist";
         }
 
-        Workstation workstation = workstationRepository.findByStationNumber(stationNumber).orElse(null);
+        List<Workstation> workstations = workstationRepository.findByStationNumber(stationNumber);
 
-        if (workstation == null) {
+        if (workstations.isEmpty()) {
             return "The workstation with that station number does not exist";
         }
+
+        if (workstations.size() > 1) {
+            return "More than one workstation has that station number";
+        }
+
+        Workstation workstation = workstations.get(0);
 
         if (hostEmployeeRepository.existsByWorkstationIdAndIdNot(workstation.getId(), id)) {
             return "That workstation is taken by another host employee";
@@ -164,28 +170,45 @@ public class HostEmployeeService {
             return "Host employee email is required";
         }
 
-        if (hostEmployee.getWorkstation() != null) {
-            if (hostEmployee.getWorkstation().getId() == null) {
-                return "Workstation ID is required";
-            }
+        String workstationMessage = resolveWorkstation(hostEmployee, id);
 
-            Workstation workstation = workstationRepository.findById(hostEmployee.getWorkstation().getId()).orElse(null);
-
-            if (workstation == null) {
-                return "The workstation with that id does not exist";
-            }
-
-            boolean taken = id == null
-                    ? hostEmployeeRepository.existsByWorkstationId(workstation.getId())
-                    : hostEmployeeRepository.existsByWorkstationIdAndIdNot(workstation.getId(), id);
-
-            if (taken) {
-                return "That workstation is taken by another host employee";
-            }
-
-            hostEmployee.setWorkstation(workstation);
+        if (workstationMessage != null) {
+            return workstationMessage;
         }
 
+        return resolveVisitPurposes(hostEmployee);
+    }
+
+    private String resolveWorkstation(HostEmployee hostEmployee, UUID id) {
+        Workstation requestedWorkstation = hostEmployee.getWorkstation();
+
+        if (requestedWorkstation == null) {
+            return null;
+        }
+
+        if (requestedWorkstation.getId() == null) {
+            return "Workstation ID is required";
+        }
+
+        Workstation workstation = workstationRepository.findById(requestedWorkstation.getId()).orElse(null);
+
+        if (workstation == null) {
+            return "The workstation with that id does not exist";
+        }
+
+        boolean taken = id == null
+                ? hostEmployeeRepository.existsByWorkstationId(workstation.getId())
+                : hostEmployeeRepository.existsByWorkstationIdAndIdNot(workstation.getId(), id);
+
+        if (taken) {
+            return "That workstation is taken by another host employee";
+        }
+
+        hostEmployee.setWorkstation(workstation);
+        return null;
+    }
+
+    private String resolveVisitPurposes(HostEmployee hostEmployee) {
         List<VisitPurpose> visitPurposes = new ArrayList<>();
 
         if (hostEmployee.getVisitPurposes() != null) {

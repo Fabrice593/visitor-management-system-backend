@@ -24,69 +24,89 @@ public class HostEmployeeController {
     public ResponseEntity<String> saveHostEmployee(@RequestBody HostEmployee hostEmployee) {
         String message = hostEmployeeService.saveHostEmployee(hostEmployee);
 
+        HttpStatus httpStatus;
+
         if (message.equals("Host employee saved successfully")) {
-            return new ResponseEntity<>(message, HttpStatus.CREATED);
+            httpStatus = HttpStatus.CREATED;
         } else if (message.endsWith("does not exist")) {
-            return new ResponseEntity<>(message, HttpStatus.NOT_FOUND);
+            httpStatus = HttpStatus.NOT_FOUND;
         } else if (message.equals("That workstation is taken by another host employee")) {
-            return new ResponseEntity<>(message, HttpStatus.CONFLICT);
+            httpStatus = HttpStatus.CONFLICT;
         } else {
-            return new ResponseEntity<>(message, HttpStatus.BAD_REQUEST);
+            httpStatus = HttpStatus.BAD_REQUEST;
         }
+
+        return new ResponseEntity<>(message, httpStatus);
     }
 
     @PutMapping("/update/{id}")
     public ResponseEntity<String> updateHostEmployee(@PathVariable UUID id, @RequestBody HostEmployee hostEmployee) {
         String message = hostEmployeeService.updateHostEmployee(id, hostEmployee);
 
+        HttpStatus httpStatus;
+
         if (message.equals("Host employee updated successfully")) {
-            return new ResponseEntity<>(message, HttpStatus.OK);
+            httpStatus = HttpStatus.OK;
         } else if (message.endsWith("does not exist")) {
-            return new ResponseEntity<>(message, HttpStatus.NOT_FOUND);
+            httpStatus = HttpStatus.NOT_FOUND;
         } else if (message.equals("That workstation is taken by another host employee")) {
-            return new ResponseEntity<>(message, HttpStatus.CONFLICT);
+            httpStatus = HttpStatus.CONFLICT;
         } else {
-            return new ResponseEntity<>(message, HttpStatus.BAD_REQUEST);
+            httpStatus = HttpStatus.BAD_REQUEST;
         }
+
+        return new ResponseEntity<>(message, httpStatus);
     }
 
     @PutMapping("/{id}/visit-purposes/{purposeId}")
     public ResponseEntity<String> addVisitPurpose(@PathVariable UUID id, @PathVariable UUID purposeId) {
         String message = hostEmployeeService.addVisitPurpose(id, purposeId);
 
+        HttpStatus httpStatus;
+
         if (message.equals("Visit purpose added to the host employee")) {
-            return new ResponseEntity<>(message, HttpStatus.OK);
+            httpStatus = HttpStatus.OK;
         } else if (message.endsWith("does not exist")) {
-            return new ResponseEntity<>(message, HttpStatus.NOT_FOUND);
+            httpStatus = HttpStatus.NOT_FOUND;
         } else {
-            return new ResponseEntity<>(message, HttpStatus.CONFLICT);
+            httpStatus = HttpStatus.CONFLICT;
         }
+
+        return new ResponseEntity<>(message, httpStatus);
     }
 
     @PatchMapping("/{id}/workstation")
     public ResponseEntity<String> changeWorkstation(@PathVariable UUID id, @RequestParam int stationNumber) {
         String message = hostEmployeeService.changeWorkstation(id, stationNumber);
 
+        HttpStatus httpStatus;
+
         if (message.equals("Workstation changed successfully")) {
-            return new ResponseEntity<>(message, HttpStatus.OK);
+            httpStatus = HttpStatus.OK;
         } else if (message.endsWith("does not exist")) {
-            return new ResponseEntity<>(message, HttpStatus.NOT_FOUND);
+            httpStatus = HttpStatus.NOT_FOUND;
         } else {
-            return new ResponseEntity<>(message, HttpStatus.CONFLICT);
+            httpStatus = HttpStatus.CONFLICT;
         }
+
+        return new ResponseEntity<>(message, httpStatus);
     }
 
     @DeleteMapping("/delete/{id}")
     public ResponseEntity<String> deleteHostEmployee(@PathVariable UUID id) {
         String message = hostEmployeeService.deleteHostEmployee(id);
 
+        HttpStatus httpStatus;
+
         if (message.equals("Host employee deleted successfully")) {
-            return new ResponseEntity<>(message, HttpStatus.OK);
+            httpStatus = HttpStatus.OK;
         } else if (message.endsWith("does not exist")) {
-            return new ResponseEntity<>(message, HttpStatus.NOT_FOUND);
+            httpStatus = HttpStatus.NOT_FOUND;
         } else {
-            return new ResponseEntity<>(message, HttpStatus.CONFLICT);
+            httpStatus = HttpStatus.CONFLICT;
         }
+
+        return new ResponseEntity<>(message, httpStatus);
     }
 
     @GetMapping("/all")

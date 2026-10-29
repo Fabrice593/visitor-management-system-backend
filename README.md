@@ -113,7 +113,7 @@ D1 errors are exactly `Visit date cannot be in the past` and `Host employee alre
 
 D3 duplicates return `The host employee already has that visit purpose`. D4 conflicts return `That workstation is taken by another host employee`.
 
-Missing visits, hosts and purposes return their existing 404 messages. Where the supplied specification does not define wording, the implementation uses HTTP 200 with `Visit status updated successfully`, `Visit purpose added to the host employee` or `Workstation changed successfully`. An unknown station number returns HTTP 404 with `The workstation with that station number does not exist`.
+Missing visits, hosts and purposes return their existing 404 messages. Where the supplied specification does not define wording, the implementation uses HTTP 200 with `Visit status updated successfully`, `Visit purpose added to the host employee` or `Workstation changed successfully`. An unknown station number returns HTTP 404 with `The workstation with that station number does not exist`. Because the model does not require station numbers to be unique, an ambiguous number returns HTTP 409 with `More than one workstation has that station number` and leaves the host unchanged.
 
 Ordinary Visit PUT requests cannot change status. When a non-DENIED visit changes host or date, its new schedule is checked for past dates and conflicts, excluding its own record. An unchanged schedule does not conflict with itself. Host creation and ordinary HostEmployee updates also check workstation occupancy so they cannot bypass the move rule.
 
@@ -163,7 +163,7 @@ Counts use repository `count()` methods, derived `countByVisitDate` and `countBy
 
 `GET /api/visits/page?page=0&size=5&sort=visitDate,desc` returns HTTP 200 with a `Page<Visit>`, including `content`, `totalPages`, `totalElements`, `number` and `size`. The controller constructs `Pageable`; the service calls `findAll(pageable)`.
 
-The defaults are page 0, size 5 and sort `visitDate,desc`. Page numbers start at zero. Sort accepts `id`, `visitDate`, `status` or `purposeNote` followed by `asc` or `desc`, ignoring the direction's case. Equal sort values have no specified order relative to each other. A page beyond the end has empty content and retains the overall totals.
+The defaults are page 0, size 5 and sort `visitDate,desc`. Page numbers start at zero. Sort accepts `id`, `visitDate`, `status` or `purposeNote` followed by `asc` or `desc`, ignoring the direction's case. Equal sort values use UUID ascending as a stable secondary order. A page beyond the end has empty content and retains the overall totals.
 
 For pagination inputs not specified in the paper, negative pages and sizes below 1 return HTTP 400 with `Page must be 0 or more and size at least 1`. A sort without exactly two comma-separated parts returns `Sort must look like visitDate,desc`. Unsupported properties or directions return `Sort must use id, visitDate, status or purposeNote with asc or desc`. Non-numeric page or size values return HTTP 400 through Spring's default handling.
 
@@ -183,7 +183,7 @@ Run the `Part F - Reports and bulk updates` folder in order against a disposable
 
 Run the `Bonus - Dashboard and pagination` folder in order against an empty disposable database. It checks the six dashboard counts and their order, changes to those counts, default and explicit pagination, page boundaries, sorting and invalid parameters. It creates its own fixtures using station numbers 1001 to 1003 and removes them afterward.
 
-The collection uses `baseUrl`, defaulting to `http://localhost:8080`. Test data contains a per-run identifier. The collection covers Parts A to F and both bonus features.
+The collection uses `baseUrl`, defaulting to `http://localhost:8080`. Test data contains a per-run identifier. The collection covers Parts A to F, both bonus features and the final-review edge cases. Each of the 18 required IDs has an exactly named request. A1 also requires the database inspection described below.
 
 Review PostgreSQL tables for A1: `visit_purpose`, `workstation`, `host_employee`, `host_employee_visit_purpose`, `visitor`, and `visit`. Part E adds the `visit_note` table and its foreign key to `visit`.
 
@@ -196,84 +196,64 @@ Review PostgreSQL tables for A1: `visit_purpose`, `workstation`, `host_employee`
 
 Entities are used directly in request and response bodies. There are no DTOs or explicit try/catch blocks.
 
-## Part A verification
+Controllers map service messages to an `HttpStatus` using if/else, then build one response for that operation. `VisitService` shares scheduling validation between creation and rescheduling. `HostEmployeeService` separates required fields, workstation resolution and visit-purpose resolution into focused methods. Validation order, API messages and repository query types remain unchanged.
 
-Verified on 29 October 2026 using JDK 23 with Java 17 compilation and a disposable PostgreSQL 17 database:
+## Requirement review
 
-- Maven package build passed.
-- All 51 collection requests and 103 assertions passed through a local Node runner executing the collection scripts. The Postman desktop application was not used for this run.
-- PostgreSQL schema inspection confirmed all six Part A tables, UUID primary keys, five foreign keys, the unique visitor ID number constraint, and string enum storage.
+| ID | Implementation and verification |
+| --- | --- |
+| A1 | Five original entities plus VisitNote, generated UUIDs, exact fields, table and join mappings, string enum and JSON loop protection; checked in PostgreSQL and API responses |
+| A2 | All 25 CRUD endpoints, success messages, missing-record handling and relationship validation |
+| B1 | Derived `findByCompanyIgnoreCaseOrderByLastNameAsc` |
+| B2 | Derived `findByStatusOrderByVisitDateAsc` |
+| B3 | Derived `findByVisitDateBetweenOrderByVisitDateAsc`; String dates parsed in the controller |
+| C1 | JPQL JOIN with case-insensitive partial purpose-name matching |
+| C2 | JPQL NOT EXISTS with workstation-number ordering |
+| C3 | JPQL IS EMPTY for unused purposes |
+| C4 | JPQL DISTINCT for visitors across repeat visits to a host |
+| D1 | Past-date rejection, derived non-DENIED conflict checks and forced EXPECTED status |
+| D2 | All 16 status transition pairs and ordinary PUT status protection |
+| D3 | Owning-side purpose append, preservation of existing links and duplicate rejection |
+| D4 | Workstation lookup and occupancy checks, including safe handling of ambiguous numbers |
+| E1 | CHECKED_OUT-only notes with server-generated ID, today's date and resolved visit |
+| E2 | JPQL visitor path and descending logged-date order across visits |
+| E3 | Note deletion and derived `existsByVisit` deletion protection |
+| F1 | JPQL GROUP BY and COUNT returning `List<Object[]>` |
+| F2 | One JPQL UPDATE with `@Modifying`, a transactional service and the real affected-row count |
+| Bonus dashboard | DashboardService and DashboardController, ordered six-count LinkedHashMap, count methods and reused C2 query |
+| Bonus pagination | Controller-built Pageable, Page<Visit> metadata, sorting, stable ties and input validation |
 
-Import and run the collection in Postman for your review before committing Part A.
+## Repeat the final checks
 
-## Part B verification
+Use a separate empty PostgreSQL database, configure `DB_URL` to point to it and start the API. Import the collection into Postman and run the whole collection in folder order. The suite creates and removes its fixtures; it does not clear an existing database. The `Final review - Edge cases` folder checks ambiguous workstation numbers and pagination across equal visit dates.
 
-Verified on 29 October 2026 against the disposable PostgreSQL 17 database:
+If Node.js is installed, the same exported collection can be run with Postman's Newman runtime:
 
-- Maven package build passed.
-- All 35 Part B requests and 78 assertions passed, including fixture setup and cleanup.
-- The complete Parts A and B collection passed: 86 requests and 181 assertions through the local Node runner. The Postman desktop application was not used for this run.
-- Repository inspection confirmed B1, B2 and B3 use derived method names only, without `@Query`.
+```powershell
+npx --yes newman@6.2.3 run visitor-management-system-midterm.postman_collection.json --env-var baseUrl=http://localhost:8080
+```
 
-Import the updated collection and run `Part B - Derived queries` in Postman for your review before committing Part B.
+The application itself does not require Node.js. Maven uses the JDK selected by `JAVA_HOME`. On macOS or Linux, run the wrapper with `bash ./mvnw clean package` and supply the same database environment variables before starting the JAR.
 
-## Part C verification
+Inspect PostgreSQL for seven tables: the six entity tables and `host_employee_visit_purpose`. Check six UUID primary keys, six foreign keys, the visitor ID number unique constraint and the Visit status enum check. Keep `ddl-auto=update` and `show-sql=true` enabled for the demo.
 
-Verified on 29 October 2026 against the disposable PostgreSQL 17 database:
+## Final verification
 
-- Maven package build passed.
-- All 48 Part C requests and 107 assertions passed, including fixture setup and cleanup.
-- The complete Parts A, B and C collection passed: 134 requests and 288 assertions through the local Node runner. The Postman desktop application was not used for this run.
-- Repository inspection confirmed all four Part C methods use `@Query` with the required JPQL mechanisms: `JOIN`, `NOT EXISTS`, `IS EMPTY` and `DISTINCT`.
+Reviewed against all 18 requirements and both bonuses on 29 October 2026:
 
-Import the updated collection and run `Part C - JPQL queries` in Postman for your review before committing Part C.
+- The documented Maven wrapper command, `mvnw.cmd -o clean package`, passed using JDK 23 and the cached dependencies. Application bytecode targets Java 17.
+- On a newly created PostgreSQL 17 database, Newman 6.2.3 passed all 450 requests and 964 assertions with zero failures. This uses Postman's runtime; the Postman desktop application was not used for this verification.
+- Schema inspection confirmed the exact seven tables and their fields, six UUID primary keys, six foreign keys, unique visitor ID numbers, string enum values and the nullable host workstation relationship.
+- A separate E2 check verified descending order with three different logged dates across two visits.
+- A separate F2 check confirmed one SQL UPDATE with no preceding SELECT, the actual affected-row count, and preservation of a checked-out visit and its note.
+- New regression cases verified controlled conflicts for ambiguous station numbers and stable pagination across equal visit dates. All test fixtures were removed after verification.
+- Application sources contain no comments, DTOs, explicit try/catch blocks or clinic-domain entity names. Derived and JPQL methods were checked against their required query types.
 
-## Part D verification
+The local project is ready for final review. Public GitHub publication remains outstanding; no remote is configured in this checkout. No commits or pushes were performed during the final review.
 
-Verified on 29 October 2026 against the disposable PostgreSQL 17 database:
+## Submission steps after review
 
-- Maven package build passed.
-- All 110 Part D requests and 221 assertions passed, including fixture setup and cleanup.
-- The full Parts A to D collection passed: 245 requests and 511 assertions through the local Node runner. The Postman desktop application was not used for this run.
-- All 16 combinations of current and requested status were tested, including persistence checks after rejected transitions.
-- Checked forced EXPECTED status, today's date, past dates, all non-DENIED booking conflicts, replacement of a DENIED visit, purpose preservation, duplicate links, occupied workstations, failed update preservation and reuse of a released workstation.
-- The Part B folder now has 36 requests because its DENIED fixture uses the new status endpoint.
-
-Import the updated collection and run `Part D - Business rules` in Postman for your review before committing Part D.
-
-## Part E verification
-
-Verified on 29 October 2026 against the disposable PostgreSQL 17 database:
-
-- Maven package build passed.
-- All 52 Part E requests and 125 assertions passed, including fixture setup and cleanup.
-- The full Parts A to E collection passed: 297 requests and 636 assertions through the local Node runner. The Postman desktop application was not used for this run.
-- A separate database-backed check seeded three different logged dates across two visits and verified that E2 returned newest first. Those temporary fixtures were removed afterward.
-- PostgreSQL inspection confirmed all six visit_note columns, its UUID primary key and its visit_id foreign key.
-- Tested note rejection for EXPECTED, CHECKED_IN and DENIED visits, forced server date and visit linkage, generated note IDs, multiple notes per visit, history across visits, visitor isolation and deletion protection until the final note is removed.
-
-Import the updated collection and run `Part E - Visit notes` in Postman for your review before committing Part E.
-
-## Part F verification
-
-Verified on 29 October 2026 against the disposable PostgreSQL 17 database:
-
-- Maven package build passed.
-- All 54 Part F requests and 108 assertions passed, including fixture setup and cleanup.
-- The full Parts A to F collection passed: 351 requests and 744 assertions through the local Node runner. The Postman desktop application was not used for this run.
-- Verified all four status counts, omission of zero-count statuses, empty reports, real affected-row counts, already-DENIED matches, repeated cancellation, host/date isolation and CHECKED_OUT protection.
-- A focused database-backed check seeded visits in all four statuses for the same host and date. Temporary SQL logging confirmed exactly one UPDATE and no preceding SELECT for cancellation. The count was 3, and the checked-out visit and its note were preserved. All temporary fixtures were removed afterward.
-
-Import the updated collection and run `Part F - Reports and bulk updates` in Postman for your review before committing Part F.
-
-## Bonus verification
-
-Verified on 29 October 2026 against the disposable PostgreSQL 17 database:
-
-- Maven package build passed.
-- All 67 bonus requests and 155 assertions passed, including fixture setup and cleanup.
-- The complete collection passed: 418 requests and 899 assertions through the local Node runner. The Postman desktop application was not used for this run.
-- Verified all six dashboard values and their key order, empty counts, and changes after workstation assignment, status changes, note deletion and visit deletion.
-- Verified page totals and content for seven visits, default parameters, ascending and descending dates, another sort property, the final page, a page beyond the end, empty results and invalid inputs.
-
-Import the updated collection and run `Bonus - Dashboard and pagination` in Postman for your review before committing the bonus features.
+1. Review and commit the bonus features and final-review fixes yourself. Existing history already contains incremental commits for the earlier parts.
+2. Create a public GitHub repository named `visitor-management-system-backend`, configure its remote and push the complete history. No Git remote is configured in this checkout yet; publication has not been performed or verified.
+3. Confirm the public repository includes this README, the Maven wrapper, all source files and `visitor-management-system-midterm.postman_collection.json` at its root. The README identity above matches the supplied specification.
+4. Run the collection in Postman for your own review and rehearse three random endpoints, including success and failure responses. Be ready to explain relationships, derived queries, JPQL, status rules and transaction boundaries.

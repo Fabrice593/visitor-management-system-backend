@@ -22,13 +22,17 @@ public class VisitNoteController {
     public ResponseEntity<String> saveVisitNote(@RequestParam UUID visitId, @RequestBody VisitNote visitNote) {
         String message = visitNoteService.saveVisitNote(visitId, visitNote);
 
+        HttpStatus httpStatus;
+
         if (message.equals("Visit note saved successfully")) {
-            return new ResponseEntity<>(message, HttpStatus.CREATED);
+            httpStatus = HttpStatus.CREATED;
         } else if (message.equals("The visit with that id does not exist")) {
-            return new ResponseEntity<>(message, HttpStatus.NOT_FOUND);
+            httpStatus = HttpStatus.NOT_FOUND;
         } else {
-            return new ResponseEntity<>(message, HttpStatus.BAD_REQUEST);
+            httpStatus = HttpStatus.BAD_REQUEST;
         }
+
+        return new ResponseEntity<>(message, httpStatus);
     }
 
     @GetMapping("/visitor/{idNumber}")
@@ -40,10 +44,14 @@ public class VisitNoteController {
     public ResponseEntity<String> deleteVisitNote(@PathVariable UUID id) {
         String message = visitNoteService.deleteVisitNote(id);
 
+        HttpStatus httpStatus;
+
         if (message.equals("Visit note deleted successfully")) {
-            return new ResponseEntity<>(message, HttpStatus.OK);
+            httpStatus = HttpStatus.OK;
         } else {
-            return new ResponseEntity<>(message, HttpStatus.NOT_FOUND);
+            httpStatus = HttpStatus.NOT_FOUND;
         }
+
+        return new ResponseEntity<>(message, httpStatus);
     }
 }

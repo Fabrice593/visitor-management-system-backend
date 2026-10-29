@@ -24,39 +24,51 @@ public class WorkstationController {
     public ResponseEntity<String> saveWorkstation(@RequestBody Workstation workstation) {
         String message = workstationService.saveWorkstation(workstation);
 
+        HttpStatus httpStatus;
+
         if (message.equals("Workstation saved successfully")) {
-            return new ResponseEntity<>(message, HttpStatus.CREATED);
+            httpStatus = HttpStatus.CREATED;
         } else if (message.endsWith("does not exist")) {
-            return new ResponseEntity<>(message, HttpStatus.NOT_FOUND);
+            httpStatus = HttpStatus.NOT_FOUND;
         } else {
-            return new ResponseEntity<>(message, HttpStatus.BAD_REQUEST);
+            httpStatus = HttpStatus.BAD_REQUEST;
         }
+
+        return new ResponseEntity<>(message, httpStatus);
     }
 
     @PutMapping("/update/{id}")
     public ResponseEntity<String> updateWorkstation(@PathVariable UUID id, @RequestBody Workstation workstation) {
         String message = workstationService.updateWorkstation(id, workstation);
 
+        HttpStatus httpStatus;
+
         if (message.equals("Workstation updated successfully")) {
-            return new ResponseEntity<>(message, HttpStatus.OK);
+            httpStatus = HttpStatus.OK;
         } else if (message.endsWith("does not exist")) {
-            return new ResponseEntity<>(message, HttpStatus.NOT_FOUND);
+            httpStatus = HttpStatus.NOT_FOUND;
         } else {
-            return new ResponseEntity<>(message, HttpStatus.BAD_REQUEST);
+            httpStatus = HttpStatus.BAD_REQUEST;
         }
+
+        return new ResponseEntity<>(message, httpStatus);
     }
 
     @DeleteMapping("/delete/{id}")
     public ResponseEntity<String> deleteWorkstation(@PathVariable UUID id) {
         String message = workstationService.deleteWorkstation(id);
 
+        HttpStatus httpStatus;
+
         if (message.equals("Workstation deleted successfully")) {
-            return new ResponseEntity<>(message, HttpStatus.OK);
+            httpStatus = HttpStatus.OK;
         } else if (message.endsWith("does not exist")) {
-            return new ResponseEntity<>(message, HttpStatus.NOT_FOUND);
+            httpStatus = HttpStatus.NOT_FOUND;
         } else {
-            return new ResponseEntity<>(message, HttpStatus.CONFLICT);
+            httpStatus = HttpStatus.CONFLICT;
         }
+
+        return new ResponseEntity<>(message, httpStatus);
     }
 
     @GetMapping("/all")

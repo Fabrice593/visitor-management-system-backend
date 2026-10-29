@@ -38,19 +38,16 @@ public class VisitService {
     @Transactional
     public String saveVisit(Visit visit) {
 
-        String message = validateVisit(visit);
+        String message = validateAndResolveVisit(visit);
 
         if (message != null) {
             return message;
         }
 
-        if (visit.getVisitDate().isBefore(LocalDate.now())) {
-            return "Visit date cannot be in the past";
-        }
+        String scheduleMessage = validateSchedule(visit, null);
 
-        if (visitRepository.existsByHostEmployeeIdAndVisitDateAndStatusNot(
-                visit.getHostEmployee().getId(), visit.getVisitDate(), VisitStatus.DENIED)) {
-            return "Host employee already receives a visitor on that date";
+        if (scheduleMessage != null) {
+            return scheduleMessage;
         }
 
         visit.setId(null);
@@ -69,23 +66,17 @@ public class VisitService {
             return "The visit with that id does not exist";
         }
 
-        String message = validateVisit(visit);
+        String message = validateAndResolveVisit(visit);
 
         if (message != null) {
             return message;
         }
 
-        boolean changesSchedule = !existing.getVisitDate().equals(visit.getVisitDate())
-                || !existing.getHostEmployee().getId().equals(visit.getHostEmployee().getId());
+        if (hasScheduleChanged(existing, visit) && existing.getStatus() != VisitStatus.DENIED) {
+            String scheduleMessage = validateSchedule(visit, id);
 
-        if (changesSchedule && existing.getStatus() != VisitStatus.DENIED) {
-            if (visit.getVisitDate().isBefore(LocalDate.now())) {
-                return "Visit date cannot be in the past";
-            }
-
-            if (visitRepository.existsByHostEmployeeIdAndVisitDateAndStatusNotAndIdNot(
-                    visit.getHostEmployee().getId(), visit.getVisitDate(), VisitStatus.DENIED, id)) {
-                return "Host employee already receives a visitor on that date";
+            if (scheduleMessage != null) {
+                return scheduleMessage;
             }
         }
 
@@ -178,7 +169,32 @@ public class VisitService {
         return "Visit deleted successfully";
     }
 
-    private String validateVisit(Visit visit) {
+    private boolean hasScheduleChanged(Visit existing, Visit requested) {
+        return !existing.getVisitDate().equals(requested.getVisitDate())
+                || !existing.getHostEmployee().getId().equals(requested.getHostEmployee().getId());
+    }
+
+    private String validateSchedule(Visit visit, UUID excludedVisitId) {
+        if (visit.getVisitDate().isBefore(LocalDate.now())) {
+            return "Visit date cannot be in the past";
+        }
+
+        UUID hostEmployeeId = visit.getHostEmployee().getId();
+        LocalDate visitDate = visit.getVisitDate();
+        boolean occupied = excludedVisitId == null
+                ? visitRepository.existsByHostEmployeeIdAndVisitDateAndStatusNot(
+                        hostEmployeeId, visitDate, VisitStatus.DENIED)
+                : visitRepository.existsByHostEmployeeIdAndVisitDateAndStatusNotAndIdNot(
+                        hostEmployeeId, visitDate, VisitStatus.DENIED, excludedVisitId);
+
+        if (occupied) {
+            return "Host employee already receives a visitor on that date";
+        }
+
+        return null;
+    }
+
+    private String validateAndResolveVisit(Visit visit) {
 
         if (visit.getVisitDate() == null) {
             return "Visit date is required";

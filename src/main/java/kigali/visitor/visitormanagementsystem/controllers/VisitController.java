@@ -31,58 +31,74 @@ public class VisitController {
     public ResponseEntity<String> saveVisit(@RequestBody Visit visit) {
         String message = visitService.saveVisit(visit);
 
+        HttpStatus httpStatus;
+
         if (message.equals("Visit saved successfully")) {
-            return new ResponseEntity<>(message, HttpStatus.CREATED);
+            httpStatus = HttpStatus.CREATED;
         } else if (message.endsWith("does not exist")) {
-            return new ResponseEntity<>(message, HttpStatus.NOT_FOUND);
+            httpStatus = HttpStatus.NOT_FOUND;
         } else if (message.equals("Host employee already receives a visitor on that date")) {
-            return new ResponseEntity<>(message, HttpStatus.CONFLICT);
+            httpStatus = HttpStatus.CONFLICT;
         } else {
-            return new ResponseEntity<>(message, HttpStatus.BAD_REQUEST);
+            httpStatus = HttpStatus.BAD_REQUEST;
         }
+
+        return new ResponseEntity<>(message, httpStatus);
     }
 
     @PutMapping("/update/{id}")
     public ResponseEntity<String> updateVisit(@PathVariable UUID id, @RequestBody Visit visit) {
         String message = visitService.updateVisit(id, visit);
 
+        HttpStatus httpStatus;
+
         if (message.equals("Visit updated successfully")) {
-            return new ResponseEntity<>(message, HttpStatus.OK);
+            httpStatus = HttpStatus.OK;
         } else if (message.endsWith("does not exist")) {
-            return new ResponseEntity<>(message, HttpStatus.NOT_FOUND);
+            httpStatus = HttpStatus.NOT_FOUND;
         } else if (message.equals("Host employee already receives a visitor on that date")) {
-            return new ResponseEntity<>(message, HttpStatus.CONFLICT);
+            httpStatus = HttpStatus.CONFLICT;
         } else {
-            return new ResponseEntity<>(message, HttpStatus.BAD_REQUEST);
+            httpStatus = HttpStatus.BAD_REQUEST;
         }
+
+        return new ResponseEntity<>(message, httpStatus);
     }
 
     @PatchMapping("/{id}/status")
     public ResponseEntity<String> changeStatus(@PathVariable UUID id, @RequestParam VisitStatus status) {
         String message = visitService.changeStatus(id, status);
 
+        HttpStatus httpStatus;
+
         if (message.equals("Visit status updated successfully")) {
-            return new ResponseEntity<>(message, HttpStatus.OK);
+            httpStatus = HttpStatus.OK;
         } else if (message.equals("The visit with that id does not exist")) {
-            return new ResponseEntity<>(message, HttpStatus.NOT_FOUND);
+            httpStatus = HttpStatus.NOT_FOUND;
         } else {
-            return new ResponseEntity<>(message, HttpStatus.BAD_REQUEST);
+            httpStatus = HttpStatus.BAD_REQUEST;
         }
+
+        return new ResponseEntity<>(message, httpStatus);
     }
 
     @DeleteMapping("/delete/{id}")
     public ResponseEntity<String> deleteVisit(@PathVariable UUID id) {
         String message = visitService.deleteVisit(id);
 
+        HttpStatus httpStatus;
+
         if (message.equals("Visit deleted successfully")) {
-            return new ResponseEntity<>(message, HttpStatus.OK);
+            httpStatus = HttpStatus.OK;
         } else if (message.endsWith("does not exist")) {
-            return new ResponseEntity<>(message, HttpStatus.NOT_FOUND);
+            httpStatus = HttpStatus.NOT_FOUND;
         } else if (message.equals("That visit has visit notes, delete them first")) {
-            return new ResponseEntity<>(message, HttpStatus.CONFLICT);
+            httpStatus = HttpStatus.CONFLICT;
         } else {
-            return new ResponseEntity<>(message, HttpStatus.BAD_REQUEST);
+            httpStatus = HttpStatus.BAD_REQUEST;
         }
+
+        return new ResponseEntity<>(message, httpStatus);
     }
 
     @GetMapping("/all")
@@ -112,7 +128,13 @@ public class VisitController {
                     HttpStatus.BAD_REQUEST);
         }
 
-        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, property));
+        Sort sortOrder = Sort.by(direction, property);
+
+        if (!property.equals("id")) {
+            sortOrder = sortOrder.and(Sort.by("id"));
+        }
+
+        Pageable pageable = PageRequest.of(page, size, sortOrder);
 
         return new ResponseEntity<>(visitService.getVisitsPage(pageable), HttpStatus.OK);
     }

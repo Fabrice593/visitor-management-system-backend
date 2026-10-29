@@ -24,43 +24,55 @@ public class VisitorController {
     public ResponseEntity<String> saveVisitor(@RequestBody Visitor visitor) {
         String message = visitorService.saveVisitor(visitor);
 
+        HttpStatus httpStatus;
+
         if (message.equals("Visitor saved successfully")) {
-            return new ResponseEntity<>(message, HttpStatus.CREATED);
+            httpStatus = HttpStatus.CREATED;
         } else if (message.endsWith("does not exist")) {
-            return new ResponseEntity<>(message, HttpStatus.NOT_FOUND);
+            httpStatus = HttpStatus.NOT_FOUND;
         } else if (message.equals("A visitor with that ID number already exists")) {
-            return new ResponseEntity<>(message, HttpStatus.CONFLICT);
+            httpStatus = HttpStatus.CONFLICT;
         } else {
-            return new ResponseEntity<>(message, HttpStatus.BAD_REQUEST);
+            httpStatus = HttpStatus.BAD_REQUEST;
         }
+
+        return new ResponseEntity<>(message, httpStatus);
     }
 
     @PutMapping("/update/{id}")
     public ResponseEntity<String> updateVisitor(@PathVariable UUID id, @RequestBody Visitor visitor) {
         String message = visitorService.updateVisitor(id, visitor);
 
+        HttpStatus httpStatus;
+
         if (message.equals("Visitor updated successfully")) {
-            return new ResponseEntity<>(message, HttpStatus.OK);
+            httpStatus = HttpStatus.OK;
         } else if (message.endsWith("does not exist")) {
-            return new ResponseEntity<>(message, HttpStatus.NOT_FOUND);
+            httpStatus = HttpStatus.NOT_FOUND;
         } else if (message.equals("A visitor with that ID number already exists")) {
-            return new ResponseEntity<>(message, HttpStatus.CONFLICT);
+            httpStatus = HttpStatus.CONFLICT;
         } else {
-            return new ResponseEntity<>(message, HttpStatus.BAD_REQUEST);
+            httpStatus = HttpStatus.BAD_REQUEST;
         }
+
+        return new ResponseEntity<>(message, httpStatus);
     }
 
     @DeleteMapping("/delete/{id}")
     public ResponseEntity<String> deleteVisitor(@PathVariable UUID id) {
         String message = visitorService.deleteVisitor(id);
 
+        HttpStatus httpStatus;
+
         if (message.equals("Visitor deleted successfully")) {
-            return new ResponseEntity<>(message, HttpStatus.OK);
+            httpStatus = HttpStatus.OK;
         } else if (message.endsWith("does not exist")) {
-            return new ResponseEntity<>(message, HttpStatus.NOT_FOUND);
+            httpStatus = HttpStatus.NOT_FOUND;
         } else {
-            return new ResponseEntity<>(message, HttpStatus.CONFLICT);
+            httpStatus = HttpStatus.CONFLICT;
         }
+
+        return new ResponseEntity<>(message, httpStatus);
     }
 
     @GetMapping("/all")

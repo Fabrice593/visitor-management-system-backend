@@ -81,7 +81,7 @@
           ]
         },
         {
-          "name": "A2 - Get visit purpose",
+          "name": "A1",
           "request": {
             "method": "GET",
             "header": [],
@@ -546,7 +546,7 @@
           ]
         },
         {
-          "name": "A2 - Create visit",
+          "name": "A2",
           "request": {
             "method": "POST",
             "header": [
@@ -10107,6 +10107,760 @@
                   "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
                   "const page = pm.response.json();",
                   "pm.test(\"Page metadata and content size are correct\", function () { pm.expect(page.totalElements).to.eql(0); pm.expect(page.totalPages).to.eql(0); pm.expect(page.number).to.eql(0); pm.expect(page.size).to.eql(5); pm.expect(page.content.length).to.eql(0); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Final review - Edge cases",
+      "description": "Run against an empty disposable database. Checks ambiguous workstation numbers and stable pagination across equal visit dates, then cleans up.",
+      "item": [
+        {
+          "name": "D4 review - Create duplicate-number workstation 0",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/workstations/save",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"stationNumber\": 1404,\n  \"name\": \"Review-Station-0-{{reviewRunId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set(\"reviewRunId\", pm.variables.replaceIn(\"{{$guid}}\"));",
+                  "const date = new Date(); date.setDate(date.getDate() + 60); pm.collectionVariables.set(\"reviewDate\", date.getFullYear() + \"-\" + String(date.getMonth() + 1).padStart(2, \"0\") + \"-\" + String(date.getDate()).padStart(2, \"0\"));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Workstation saved successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D4 review - Create duplicate-number workstation 1",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/workstations/save",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"stationNumber\": 1404,\n  \"name\": \"Review-Station-1-{{reviewRunId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Workstation saved successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D4 review - Capture workstation IDs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/workstations/all"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "for (let index = 0; index < 2; index++) { const record = pm.response.json().find(row => row.name === \"Review-Station-\" + index + \"-\" + pm.collectionVariables.get(\"reviewRunId\")); pm.test(\"Workstation fixture exists\", function () { pm.expect(record).to.be.an(\"object\"); }); if (record) pm.collectionVariables.set(\"reviewStation\" + index, record.id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Create review host",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/host-employees/save",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Review\",\n  \"lastName\": \"Host\",\n  \"email\": \"review-{{reviewRunId}}@example.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Host employee saved successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Capture review host",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/host-employees/all"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "const host = pm.response.json().find(row => row.email === \"review-\" + pm.collectionVariables.get(\"reviewRunId\") + \"@example.com\"); pm.test(\"Host exists\", function () { pm.expect(host).to.be.an(\"object\"); }); if (host) pm.collectionVariables.set(\"reviewHost\", host.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D4 review - Ambiguous station number returns conflict",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": "{{baseUrl}}/api/host-employees/{{reviewHost}}/workstation?stationNumber=1404"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 409\", function () { pm.response.to.have.status(409); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"More than one workstation has that station number\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D4 review - Failed lookup preserves host",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/host-employees/{{reviewHost}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"No workstation was assigned\", function () { pm.expect(pm.response.json().workstation).to.eql(null); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D4 review - Remove ambiguous workstation",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/workstations/delete/{{reviewStation1}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Workstation deleted successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D4 review - Unique lookup now succeeds",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": "{{baseUrl}}/api/host-employees/{{reviewHost}}/workstation?stationNumber=1404"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Workstation changed successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D4 review - Correct station assigned",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/host-employees/{{reviewHost}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Correct station persisted\", function () { pm.expect(pm.response.json().workstation.id).to.eql(pm.collectionVariables.get(\"reviewStation0\")); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Create review visitor",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/visitors/save",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Review\",\n  \"lastName\": \"Visitor\",\n  \"idNumber\": \"REVIEW-{{reviewRunId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visitor saved successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Capture review visitor",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visitors/all"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "const visitor = pm.response.json().find(row => row.idNumber === \"REVIEW-\" + pm.collectionVariables.get(\"reviewRunId\")); pm.test(\"Visitor exists\", function () { pm.expect(visitor).to.be.an(\"object\"); }); if (visitor) pm.collectionVariables.set(\"reviewVisitor\", visitor.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pagination review - Create tied visit 0",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/visits/save",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"visitDate\": \"{{reviewDate}}\",\n  \"purposeNote\": \"Review-Visit-0-{{reviewRunId}}\",\n  \"visitor\": {\n    \"id\": \"{{reviewVisitor}}\"\n  },\n  \"hostEmployee\": {\n    \"id\": \"{{reviewHost}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit saved successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Capture tied visit 0",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/all"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "const visit = pm.response.json().find(row => row.purposeNote === \"Review-Visit-0-\" + pm.collectionVariables.get(\"reviewRunId\")); pm.test(\"Visit exists\", function () { pm.expect(visit).to.be.an(\"object\"); }); if (visit) pm.collectionVariables.set(\"reviewVisit0\", visit.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Deny tied visit 0",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/{{reviewVisit0}}/status?status=DENIED"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit status updated successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pagination review - Create tied visit 1",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/visits/save",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"visitDate\": \"{{reviewDate}}\",\n  \"purposeNote\": \"Review-Visit-1-{{reviewRunId}}\",\n  \"visitor\": {\n    \"id\": \"{{reviewVisitor}}\"\n  },\n  \"hostEmployee\": {\n    \"id\": \"{{reviewHost}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit saved successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Capture tied visit 1",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/all"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "const visit = pm.response.json().find(row => row.purposeNote === \"Review-Visit-1-\" + pm.collectionVariables.get(\"reviewRunId\")); pm.test(\"Visit exists\", function () { pm.expect(visit).to.be.an(\"object\"); }); if (visit) pm.collectionVariables.set(\"reviewVisit1\", visit.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Deny tied visit 1",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/{{reviewVisit1}}/status?status=DENIED"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit status updated successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pagination review - Create tied visit 2",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/visits/save",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"visitDate\": \"{{reviewDate}}\",\n  \"purposeNote\": \"Review-Visit-2-{{reviewRunId}}\",\n  \"visitor\": {\n    \"id\": \"{{reviewVisitor}}\"\n  },\n  \"hostEmployee\": {\n    \"id\": \"{{reviewHost}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit saved successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Capture tied visit 2",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/all"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "const visit = pm.response.json().find(row => row.purposeNote === \"Review-Visit-2-\" + pm.collectionVariables.get(\"reviewRunId\")); pm.test(\"Visit exists\", function () { pm.expect(visit).to.be.an(\"object\"); }); if (visit) pm.collectionVariables.set(\"reviewVisit2\", visit.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pagination review - Tied date asc page 0",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/page?page=0&size=1&sort=visitDate,asc"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Equal dates use ascending UUID as a stable tie breaker\", function () { const page = pm.response.json(); const ids = [0, 1, 2].map(index => pm.collectionVariables.get(\"reviewVisit\" + index)).sort(); pm.expect(page.totalElements).to.eql(3); pm.expect(page.totalPages).to.eql(3); pm.expect(page.content.length).to.eql(1); pm.expect(page.content[0].id).to.eql(ids[0]); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pagination review - Tied date asc page 1",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/page?page=1&size=1&sort=visitDate,asc"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Equal dates use ascending UUID as a stable tie breaker\", function () { const page = pm.response.json(); const ids = [0, 1, 2].map(index => pm.collectionVariables.get(\"reviewVisit\" + index)).sort(); pm.expect(page.totalElements).to.eql(3); pm.expect(page.totalPages).to.eql(3); pm.expect(page.content.length).to.eql(1); pm.expect(page.content[0].id).to.eql(ids[1]); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pagination review - Tied date asc page 2",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/page?page=2&size=1&sort=visitDate,asc"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Equal dates use ascending UUID as a stable tie breaker\", function () { const page = pm.response.json(); const ids = [0, 1, 2].map(index => pm.collectionVariables.get(\"reviewVisit\" + index)).sort(); pm.expect(page.totalElements).to.eql(3); pm.expect(page.totalPages).to.eql(3); pm.expect(page.content.length).to.eql(1); pm.expect(page.content[0].id).to.eql(ids[2]); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pagination review - Tied date desc page 0",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/page?page=0&size=1&sort=visitDate,desc"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Equal dates use ascending UUID as a stable tie breaker\", function () { const page = pm.response.json(); const ids = [0, 1, 2].map(index => pm.collectionVariables.get(\"reviewVisit\" + index)).sort(); pm.expect(page.totalElements).to.eql(3); pm.expect(page.totalPages).to.eql(3); pm.expect(page.content.length).to.eql(1); pm.expect(page.content[0].id).to.eql(ids[0]); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pagination review - Tied date desc page 1",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/page?page=1&size=1&sort=visitDate,desc"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Equal dates use ascending UUID as a stable tie breaker\", function () { const page = pm.response.json(); const ids = [0, 1, 2].map(index => pm.collectionVariables.get(\"reviewVisit\" + index)).sort(); pm.expect(page.totalElements).to.eql(3); pm.expect(page.totalPages).to.eql(3); pm.expect(page.content.length).to.eql(1); pm.expect(page.content[0].id).to.eql(ids[1]); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pagination review - Tied date desc page 2",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/page?page=2&size=1&sort=visitDate,desc"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Equal dates use ascending UUID as a stable tie breaker\", function () { const page = pm.response.json(); const ids = [0, 1, 2].map(index => pm.collectionVariables.get(\"reviewVisit\" + index)).sort(); pm.expect(page.totalElements).to.eql(3); pm.expect(page.totalPages).to.eql(3); pm.expect(page.content.length).to.eql(1); pm.expect(page.content[0].id).to.eql(ids[2]); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cleanup - Delete tied visit 0",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/delete/{{reviewVisit0}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit deleted successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cleanup - Delete tied visit 1",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/delete/{{reviewVisit1}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit deleted successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cleanup - Delete tied visit 2",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/delete/{{reviewVisit2}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit deleted successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cleanup - Delete review host",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/host-employees/delete/{{reviewHost}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Host employee deleted successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cleanup - Delete review visitor",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/visitors/delete/{{reviewVisitor}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visitor deleted successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cleanup - Delete review workstation",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/workstations/delete/{{reviewStation0}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Workstation deleted successfully\"); });"
                 ]
               }
             }
