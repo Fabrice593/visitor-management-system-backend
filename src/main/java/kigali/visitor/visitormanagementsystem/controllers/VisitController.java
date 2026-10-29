@@ -6,6 +6,7 @@ import kigali.visitor.visitormanagementsystem.models.VisitStatus;
 import kigali.visitor.visitormanagementsystem.services.VisitService;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -84,6 +85,20 @@ public class VisitController {
     @GetMapping("/all")
     public List<Visit> getAllVisits() {
         return visitService.getAllVisits();
+    }
+
+    @GetMapping("/stats/by-status")
+    public List<Object[]> getVisitCountsByStatus() {
+        return visitService.getVisitCountsByStatus();
+    }
+
+    @PatchMapping("/cancel-day")
+    public ResponseEntity<String> cancelHostEmployeeDay(
+            @RequestParam UUID hostEmployeeId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        String message = visitService.cancelHostEmployeeDay(hostEmployeeId, date);
+
+        return new ResponseEntity<>(message, HttpStatus.OK);
     }
 
     @GetMapping("/by-status")

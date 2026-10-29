@@ -130,6 +130,18 @@ public class VisitService {
         return visitRepository.findAll();
     }
 
+    public List<Object[]> getVisitCountsByStatus() {
+        return visitRepository.countVisitsByStatus();
+    }
+
+    @Transactional
+    public String cancelHostEmployeeDay(UUID hostEmployeeId, LocalDate date) {
+        int cancelled = visitRepository.cancelHostEmployeeDay(
+                hostEmployeeId, date, VisitStatus.DENIED, VisitStatus.CHECKED_OUT);
+
+        return cancelled + " visits cancelled";
+    }
+
     public List<Visit> getVisitsByStatus(VisitStatus status) {
         return visitRepository.findByStatusOrderByVisitDateAsc(status);
     }

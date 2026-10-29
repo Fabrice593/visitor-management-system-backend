@@ -4,7 +4,7 @@ Student: NIYOMUGABO Fabrice
 Student ID: 27115  
 Repository name: visitor-management-system-backend
 
-A Spring Boot backend using Spring Data JPA and PostgreSQL. Parts A to E are implemented. Part F and the bonus features are pending.
+A Spring Boot backend using Spring Data JPA and PostgreSQL. Parts A to F are implemented. The bonus features are pending.
 
 ## Requirements
 
@@ -133,6 +133,17 @@ E2 returns HTTP 200 with an empty list when no notes match, including unknown vi
 
 E3 returns 200 with `Visit note deleted successfully` or 404 with `The visit note with that id does not exist`. A visit with notes returns 409 with `That visit has visit notes, delete them first`. Deleting one note does not remove its visit or other notes. Once the final note is deleted, the visit can be deleted.
 
+## Part F reports and bulk updates
+
+| ID | Endpoint | Behavior |
+| --- | --- | --- |
+| F1 | `GET /api/visits/stats/by-status` | Returns a `List<Object[]>` containing one `[status, count]` row for each status that has visits, using JPQL `GROUP BY` and `COUNT`. |
+| F2 | `PATCH /api/visits/cancel-day?hostEmployeeId=...&date=2026-10-20` | Uses one JPQL UPDATE to set the host's visits on that date to DENIED, excluding CHECKED_OUT. |
+
+Both endpoints return HTTP 200. F1 returns an empty list when there are no visits, omits statuses with zero visits and does not specify row order.
+
+F2 uses `@Modifying` on the repository method and `@Transactional` on the service method. It returns the actual affected-row count as plain text, for example `3 visits cancelled` or `0 visits cancelled`. Since CHECKED_OUT is the only excluded status, already-DENIED visits also count as matched rows, including on repeated calls. Other hosts and dates remain unchanged. An unknown host UUID returns `0 visits cancelled`. Invalid UUIDs, invalid dates and missing parameters return HTTP 400 through Spring's default handling.
+
 ## Postman review
 
 Import `visitor-management-system-midterm.postman_collection.json`. Run the `A2 - CRUD` folder in order against a disposable database. It creates related records, captures generated IDs through list requests, verifies reads and updates, tests validation and deletion protection, then deletes its records in dependency order.
@@ -145,7 +156,9 @@ Run the `Part D - Business rules` folder in order to test all 16 status transiti
 
 Run the `Part E - Visit notes` folder in order to test all visit statuses, server-owned note fields, history across visits, visitor isolation and deletion protection while multiple notes remain. It creates its fixtures and removes them afterward. Notes created through the API on the same day share their logged date.
 
-The collection uses `baseUrl`, defaulting to `http://localhost:8080`. Test data contains a per-run identifier. The collection covers Parts A to E; later requirement requests will be added with their respective parts.
+Run the `Part F - Reports and bulk updates` folder in order against a disposable database with no visits. It checks all four status groups, zero-group omission, the real cancellation count, repeated calls, checkout protection, host/date filtering and invalid inputs, then removes its fixtures.
+
+The collection uses `baseUrl`, defaulting to `http://localhost:8080`. Test data contains a per-run identifier. The collection covers Parts A to F; bonus requests will be added with their respective features.
 
 Review PostgreSQL tables for A1: `visit_purpose`, `workstation`, `host_employee`, `host_employee_visit_purpose`, `visitor`, and `visit`. Part E adds the `visit_note` table and its foreign key to `visit`.
 
@@ -215,3 +228,15 @@ Verified on 29 October 2026 against the disposable PostgreSQL 17 database:
 - Tested note rejection for EXPECTED, CHECKED_IN and DENIED visits, forced server date and visit linkage, generated note IDs, multiple notes per visit, history across visits, visitor isolation and deletion protection until the final note is removed.
 
 Import the updated collection and run `Part E - Visit notes` in Postman for your review before committing Part E.
+
+## Part F verification
+
+Verified on 29 October 2026 against the disposable PostgreSQL 17 database:
+
+- Maven package build passed.
+- All 54 Part F requests and 108 assertions passed, including fixture setup and cleanup.
+- The full Parts A to F collection passed: 351 requests and 744 assertions through the local Node runner. The Postman desktop application was not used for this run.
+- Verified all four status counts, omission of zero-count statuses, empty reports, real affected-row counts, already-DENIED matches, repeated cancellation, host/date isolation and CHECKED_OUT protection.
+- A focused database-backed check seeded visits in all four statuses for the same host and date. Temporary SQL logging confirmed exactly one UPDATE and no preceding SELECT for cancellation. The count was 3, and the checked-out visit and its note were preserved. All temporary fixtures were removed afterward.
+
+Import the updated collection and run `Part F - Reports and bulk updates` in Postman for your review before committing Part F. Bonus features remain pending.
