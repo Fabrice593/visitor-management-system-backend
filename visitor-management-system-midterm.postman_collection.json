@@ -1294,6 +1294,860 @@
           ]
         }
       ]
+    },
+    {
+      "name": "Part B - Derived queries",
+      "description": "Run this folder in order against a disposable database to create fixtures, test B1 to B3, then clean up.",
+      "item": [
+        {
+          "name": "Setup - Create visitor Zulu",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/visitors/save",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"PartB\",\n  \"lastName\": \"Zulu\",\n  \"idNumber\": \"B-0-{{bRunId}}\",\n  \"phone\": \"0780000000\",\n  \"company\": \"{{bCompany}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set(\"bRunId\", pm.variables.replaceIn(\"{{$guid}}\"));",
+                  "pm.collectionVariables.set(\"bCompany\", \"PartB-\" + pm.collectionVariables.get(\"bRunId\"));",
+                  "pm.collectionVariables.set(\"bCompanyLower\", pm.collectionVariables.get(\"bCompany\").toLowerCase());",
+                  "pm.collectionVariables.set(\"bCompanyUpper\", pm.collectionVariables.get(\"bCompany\").toUpperCase());",
+                  "for (let offset = 0; offset < 4; offset++) { const date = new Date(); date.setDate(date.getDate() + 10 + offset); pm.collectionVariables.set(\"bDate\" + offset, date.getFullYear() + \"-\" + String(date.getMonth() + 1).padStart(2, \"0\") + \"-\" + String(date.getDate()).padStart(2, \"0\")); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visitor saved successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Create visitor Alpha",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/visitors/save",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"PartB\",\n  \"lastName\": \"Alpha\",\n  \"idNumber\": \"B-1-{{bRunId}}\",\n  \"phone\": \"0780000000\",\n  \"company\": \"{{bCompanyLower}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visitor saved successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Create visitor Lima",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/visitors/save",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"PartB\",\n  \"lastName\": \"Lima\",\n  \"idNumber\": \"B-2-{{bRunId}}\",\n  \"phone\": \"0780000000\",\n  \"company\": \"{{bCompanyUpper}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visitor saved successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Create visitor Outside",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/visitors/save",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"PartB\",\n  \"lastName\": \"Outside\",\n  \"idNumber\": \"B-3-{{bRunId}}\",\n  \"phone\": \"0780000000\",\n  \"company\": \"Other-{{bRunId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visitor saved successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Capture visitor IDs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visitors/all"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "for (let index = 0; index < 4; index++) { const visitor = pm.response.json().find(row => row.idNumber === \"B-\" + index + \"-\" + pm.collectionVariables.get(\"bRunId\")); pm.test(\"Visitor \" + index + \" exists\", function () { pm.expect(visitor).to.be.an(\"object\"); }); if (visitor) pm.collectionVariables.set(\"bVisitor\" + index, visitor.id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "B1",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visitors/by-company?company={{bCompanyLower}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "const rows = pm.response.json();",
+                  "pm.test(\"Company matching ignores case\", function () { pm.expect(rows.length).to.eql(3); pm.expect(rows.every(row => row.company.toLowerCase() === pm.collectionVariables.get(\"bCompanyLower\"))).to.eql(true); });",
+                  "pm.test(\"Visitors are ordered by last name\", function () { pm.expect(JSON.stringify(rows.map(row => row.lastName))).to.eql(JSON.stringify([\"Alpha\", \"Lima\", \"Zulu\"])); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "B1 - Unknown company",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visitors/by-company?company=Missing-{{bRunId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"No matches returns an empty list\", function () { pm.expect(JSON.stringify(pm.response.json())).to.eql(\"[]\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "B1 - Company parameter required",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visitors/by-company"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Create host without workstation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/host-employees/save",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"PartB\",\n  \"lastName\": \"Host\",\n  \"email\": \"partb-{{bRunId}}@example.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Host employee saved successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Capture host ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/host-employees/all"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "const host = pm.response.json().find(row => row.email === \"partb-\" + pm.collectionVariables.get(\"bRunId\") + \"@example.com\");",
+                  "pm.test(\"Host without workstation is saved\", function () { pm.expect(host).to.be.an(\"object\"); pm.expect(host.workstation).to.eql(null); });",
+                  "if (host) pm.collectionVariables.set(\"bHost\", host.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Create visit on day 2",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/visits/save",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"visitDate\": \"{{bDate2}}\",\n  \"status\": \"EXPECTED\",\n  \"purposeNote\": \"PartB-2-{{bRunId}}\",\n  \"visitor\": {\n    \"id\": \"{{bVisitor0}}\"\n  },\n  \"hostEmployee\": {\n    \"id\": \"{{bHost}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit saved successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Create visit on day 0",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/visits/save",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"visitDate\": \"{{bDate0}}\",\n  \"status\": \"EXPECTED\",\n  \"purposeNote\": \"PartB-0-{{bRunId}}\",\n  \"visitor\": {\n    \"id\": \"{{bVisitor0}}\"\n  },\n  \"hostEmployee\": {\n    \"id\": \"{{bHost}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit saved successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Create visit on day 3",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/visits/save",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"visitDate\": \"{{bDate3}}\",\n  \"status\": \"DENIED\",\n  \"purposeNote\": \"PartB-3-{{bRunId}}\",\n  \"visitor\": {\n    \"id\": \"{{bVisitor0}}\"\n  },\n  \"hostEmployee\": {\n    \"id\": \"{{bHost}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit saved successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Create visit on day 1",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/visits/save",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"visitDate\": \"{{bDate1}}\",\n  \"status\": \"EXPECTED\",\n  \"purposeNote\": \"PartB-1-{{bRunId}}\",\n  \"visitor\": {\n    \"id\": \"{{bVisitor0}}\"\n  },\n  \"hostEmployee\": {\n    \"id\": \"{{bHost}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit saved successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Capture visit IDs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/all"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "for (let index = 0; index < 4; index++) { const visit = pm.response.json().find(row => row.purposeNote === \"PartB-\" + index + \"-\" + pm.collectionVariables.get(\"bRunId\")); pm.test(\"Visit \" + index + \" exists\", function () { pm.expect(visit).to.be.an(\"object\"); }); if (visit) pm.collectionVariables.set(\"bVisit\" + index, visit.id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "B2",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/by-status?status=EXPECTED"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "const rows = pm.response.json();",
+                  "pm.test(\"Only EXPECTED visits are returned\", function () { pm.expect(rows.every(row => row.status === \"EXPECTED\")).to.eql(true); });",
+                  "pm.test(\"Dates are ascending\", function () { const dates = rows.map(row => row.visitDate); pm.expect(JSON.stringify(dates)).to.eql(JSON.stringify([...dates].sort())); });",
+                  "pm.test(\"Matching fixtures are included\", function () { const seeded = rows.filter(row => row.hostEmployee.id === pm.collectionVariables.get(\"bHost\")); pm.expect(JSON.stringify(seeded.map(row => row.id))).to.eql(JSON.stringify([0, 1, 2].map(index => pm.collectionVariables.get(\"bVisit\" + index)))); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "B2 - DENIED status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/by-status?status=DENIED"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "const rows = pm.response.json();",
+                  "pm.test(\"Only DENIED visits are returned\", function () { pm.expect(rows.every(row => row.status === \"DENIED\")).to.eql(true); pm.expect(rows.some(row => row.id === pm.collectionVariables.get(\"bVisit3\"))).to.eql(true); });",
+                  "pm.test(\"Dates are ascending\", function () { const dates = rows.map(row => row.visitDate); pm.expect(JSON.stringify(dates)).to.eql(JSON.stringify([...dates].sort())); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "B2 - Invalid status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/by-status?status=UNKNOWN"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "B2 - Status parameter required",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/by-status"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "B3",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/between?start={{bDate1}}&end={{bDate2}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "const rows = pm.response.json();",
+                  "pm.test(\"Every date is inside the inclusive range\", function () { pm.expect(rows.every(row => row.visitDate >= pm.collectionVariables.get(\"bDate1\") && row.visitDate <= pm.collectionVariables.get(\"bDate2\"))).to.eql(true); });",
+                  "pm.test(\"Dates are ascending\", function () { const dates = rows.map(row => row.visitDate); pm.expect(JSON.stringify(dates)).to.eql(JSON.stringify([...dates].sort())); });",
+                  "pm.test(\"Both boundaries are included and outside fixtures excluded\", function () { const seeded = rows.filter(row => row.hostEmployee.id === pm.collectionVariables.get(\"bHost\")); pm.expect(JSON.stringify(seeded.map(row => row.id))).to.eql(JSON.stringify([1, 2].map(index => pm.collectionVariables.get(\"bVisit\" + index)))); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "B3 - Same start and end",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/between?start={{bDate1}}&end={{bDate1}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "const rows = pm.response.json();",
+                  "pm.test(\"Single-day range includes that day\", function () { pm.expect(rows.every(row => row.visitDate === pm.collectionVariables.get(\"bDate1\"))).to.eql(true); pm.expect(rows.some(row => row.id === pm.collectionVariables.get(\"bVisit1\"))).to.eql(true); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "B3 - Empty range result",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/between?start=1900-01-01&end=1900-01-01"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"No visits returns an empty list\", function () { pm.expect(JSON.stringify(pm.response.json())).to.eql(\"[]\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "B3 - Reversed range",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/between?start={{bDate2}}&end={{bDate1}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"End date must not be before start date\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "B3 - Invalid start date",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/between?start=2026-02-30&end={{bDate2}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Dates must use yyyy-MM-dd format\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "B3 - Invalid end date",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/between?start={{bDate1}}&end=invalid"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Dates must use yyyy-MM-dd format\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "B3 - End parameter required",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/between?start={{bDate1}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cleanup - Delete visit 0",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/delete/{{bVisit0}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit deleted successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cleanup - Delete visit 1",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/delete/{{bVisit1}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit deleted successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cleanup - Delete visit 2",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/delete/{{bVisit2}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit deleted successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cleanup - Delete visit 3",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/delete/{{bVisit3}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit deleted successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cleanup - Delete host",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/host-employees/delete/{{bHost}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Host employee deleted successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cleanup - Delete visitor 0",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/visitors/delete/{{bVisitor0}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visitor deleted successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cleanup - Delete visitor 1",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/visitors/delete/{{bVisitor1}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visitor deleted successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cleanup - Delete visitor 2",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/visitors/delete/{{bVisitor2}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visitor deleted successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cleanup - Delete visitor 3",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/visitors/delete/{{bVisitor3}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visitor deleted successfully\"); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
     }
   ]
 }

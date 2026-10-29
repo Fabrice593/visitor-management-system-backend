@@ -68,6 +68,11 @@ public class VisitorController {
         return visitorService.getAllVisitors();
     }
 
+    @GetMapping("/by-company")
+    public List<Visitor> getVisitorsByCompany(@RequestParam String company) {
+        return visitorService.getVisitorsByCompany(company);
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<?> getVisitorById(@PathVariable UUID id) {
         Optional<Visitor> visitor = visitorService.getVisitorById(id);

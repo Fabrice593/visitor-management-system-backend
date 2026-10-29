@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -74,6 +75,14 @@ public class VisitService {
 
     public List<Visit> getAllVisits() {
         return visitRepository.findAll();
+    }
+
+    public List<Visit> getVisitsByStatus(VisitStatus status) {
+        return visitRepository.findByStatusOrderByVisitDateAsc(status);
+    }
+
+    public List<Visit> getVisitsBetween(LocalDate start, LocalDate end) {
+        return visitRepository.findByVisitDateBetweenOrderByVisitDateAsc(start, end);
     }
 
     public Optional<Visit> getVisitById(UUID id) {

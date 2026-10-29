@@ -1,6 +1,7 @@
 package kigali.visitor.visitormanagementsystem.controllers;
 
 import kigali.visitor.visitormanagementsystem.models.Visit;
+import kigali.visitor.visitormanagementsystem.models.VisitStatus;
 
 import kigali.visitor.visitormanagementsystem.services.VisitService;
 
@@ -9,6 +10,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -62,6 +65,28 @@ public class VisitController {
     @GetMapping("/all")
     public List<Visit> getAllVisits() {
         return visitService.getAllVisits();
+    }
+
+    @GetMapping("/by-status")
+    public List<Visit> getVisitsByStatus(@RequestParam VisitStatus status) {
+        return visitService.getVisitsByStatus(status);
+    }
+
+    @GetMapping("/between")
+    public ResponseEntity<?> getVisitsBetween(@RequestParam String start, @RequestParam String end) {
+        LocalDate startDate = LocalDate.parse(start);
+        LocalDate endDate = LocalDate.parse(end);
+
+        if (endDate.isBefore(startDate)) {
+            return new ResponseEntity<>("End date must not be before start date", HttpStatus.BAD_REQUEST);
+        } else {
+            return new ResponseEntity<>(visitService.getVisitsBetween(startDate, endDate), HttpStatus.OK);
+        }
+    }
+
+    @ExceptionHandler(DateTimeParseException.class)
+    public ResponseEntity<String> handleInvalidDate(DateTimeParseException exception) {
+        return new ResponseEntity<>("Dates must use yyyy-MM-dd format", HttpStatus.BAD_REQUEST);
     }
 
     @GetMapping("/{id}")
