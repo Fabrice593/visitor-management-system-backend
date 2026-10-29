@@ -76,6 +76,10 @@ public class HostEmployeeService {
         return hostEmployeeRepository.findAll();
     }
 
+    public List<HostEmployee> getHostEmployeesByVisitPurpose(String name) {
+        return hostEmployeeRepository.findByVisitPurposeName(name);
+    }
+
     public Optional<HostEmployee> getHostEmployeeById(UUID id) {
         return hostEmployeeRepository.findById(id);
     }

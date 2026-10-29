@@ -64,6 +64,11 @@ public class HostEmployeeController {
         return hostEmployeeService.getAllHostEmployees();
     }
 
+    @GetMapping("/by-visit-purpose")
+    public List<HostEmployee> getHostEmployeesByVisitPurpose(@RequestParam String name) {
+        return hostEmployeeService.getHostEmployeesByVisitPurpose(name);
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<?> getHostEmployeeById(@PathVariable UUID id) {
         Optional<HostEmployee> hostEmployee = hostEmployeeService.getHostEmployeeById(id);

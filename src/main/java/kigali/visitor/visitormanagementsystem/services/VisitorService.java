@@ -69,6 +69,10 @@ public class VisitorService {
         return visitorRepository.findByCompanyIgnoreCaseOrderByLastNameAsc(company);
     }
 
+    public List<Visitor> getVisitorsOfHostEmployee(UUID hostEmployeeId) {
+        return visitorRepository.findVisitorsOfHostEmployee(hostEmployeeId);
+    }
+
     public Optional<Visitor> getVisitorById(UUID id) {
         return visitorRepository.findById(id);
     }

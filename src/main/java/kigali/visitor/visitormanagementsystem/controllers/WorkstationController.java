@@ -64,6 +64,11 @@ public class WorkstationController {
         return workstationService.getAllWorkstations();
     }
 
+    @GetMapping("/free")
+    public List<Workstation> getFreeWorkstations() {
+        return workstationService.getFreeWorkstations();
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<?> getWorkstationById(@PathVariable UUID id) {
         Optional<Workstation> workstation = workstationService.getWorkstationById(id);

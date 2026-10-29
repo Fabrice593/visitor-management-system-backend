@@ -62,6 +62,10 @@ public class WorkstationService {
         return workstationRepository.findAll();
     }
 
+    public List<Workstation> getFreeWorkstations() {
+        return workstationRepository.findFreeWorkstations();
+    }
+
     public Optional<Workstation> getWorkstationById(UUID id) {
         return workstationRepository.findById(id);
     }

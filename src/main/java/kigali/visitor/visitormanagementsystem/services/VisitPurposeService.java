@@ -61,6 +61,10 @@ public class VisitPurposeService {
         return visitPurposeRepository.findAll();
     }
 
+    public List<VisitPurpose> getUnusedVisitPurposes() {
+        return visitPurposeRepository.findUnusedVisitPurposes();
+    }
+
     public Optional<VisitPurpose> getVisitPurposeById(UUID id) {
         return visitPurposeRepository.findById(id);
     }

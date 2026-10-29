@@ -64,6 +64,11 @@ public class VisitPurposeController {
         return visitPurposeService.getAllVisitPurposes();
     }
 
+    @GetMapping("/unused")
+    public List<VisitPurpose> getUnusedVisitPurposes() {
+        return visitPurposeService.getUnusedVisitPurposes();
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<?> getVisitPurposeById(@PathVariable UUID id) {
         Optional<VisitPurpose> visitPurpose = visitPurposeService.getVisitPurposeById(id);

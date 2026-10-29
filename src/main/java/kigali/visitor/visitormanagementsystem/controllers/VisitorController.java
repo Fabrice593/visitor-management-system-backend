@@ -73,6 +73,11 @@ public class VisitorController {
         return visitorService.getVisitorsByCompany(company);
     }
 
+    @GetMapping("/of-host-employee/{hostEmployeeId}")
+    public List<Visitor> getVisitorsOfHostEmployee(@PathVariable UUID hostEmployeeId) {
+        return visitorService.getVisitorsOfHostEmployee(hostEmployeeId);
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<?> getVisitorById(@PathVariable UUID id) {
         Optional<Visitor> visitor = visitorService.getVisitorById(id);

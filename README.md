@@ -4,7 +4,7 @@ Student: NIYOMUGABO Fabrice
 Student ID: 27115  
 Repository name: visitor-management-system-backend
 
-A Spring Boot backend using Spring Data JPA and PostgreSQL. Parts A and B are implemented. Parts C to F and the bonus features are pending.
+A Spring Boot backend using Spring Data JPA and PostgreSQL. Parts A, B and C are implemented. Parts D to F and the bonus features are pending.
 
 ## Requirements
 
@@ -81,13 +81,28 @@ All three queries use Spring Data repository method names without `@Query` or JP
 
 The B3 controller converts the two String parameters to `LocalDate`. For input errors not explicitly specified in the paper, reversed ranges return HTTP 400 with `End date must not be before start date`, and invalid dates return HTTP 400 with `Dates must use yyyy-MM-dd format`. Missing required parameters and invalid status values also return HTTP 400 through Spring's default handling.
 
+## Part C endpoints
+
+Each query uses JPQL with `@Query` and returns HTTP 200 with a JSON list.
+
+| ID | Endpoint | JPQL behavior |
+| --- | --- | --- |
+| C1 | `GET /api/host-employees/by-visit-purpose?name=meeting` | Joins visit purposes and matches a case-insensitive part of the purpose name |
+| C2 | `GET /api/workstations/free` | Uses `NOT EXISTS` to find unassigned workstations, ordered by station number ascending |
+| C3 | `GET /api/visit-purposes/unused` | Uses `IS EMPTY` to find purposes with no host employees |
+| C4 | `GET /api/visitors/of-host-employee/{hostEmployeeId}` | Uses `DISTINCT` to return each visitor once across repeat visits to the host |
+
+Queries with no matches return an empty list. C4 also returns an empty list for an unknown host UUID because no visit matches it. Invalid UUIDs and a missing C1 name parameter return HTTP 400 through Spring's default handling.
+
 ## Postman review
 
 Import `visitor-management-system-midterm.postman_collection.json`. Run the `A2 - CRUD` folder in order against a disposable database. It creates related records, captures generated IDs through list requests, verifies reads and updates, tests validation and deletion protection, then deletes its records in dependency order.
 
 Run the `Part B - Derived queries` folder in order to create its own fixtures, verify B1 to B3 and remove those fixtures. It checks company case handling, ordering, status filtering, inclusive date boundaries, single-day ranges and invalid inputs. Its empty-range check assumes no visit exists on 1900-01-01 in the disposable database.
 
-The collection uses `baseUrl`, defaulting to `http://localhost:8080`. Test data contains a per-run identifier. The collection covers Parts A and B; later requirement requests will be added with their respective parts.
+Run the `Part C - JPQL queries` folder in order to create its fixtures, verify C1 to C4 and clean up. It checks partial case-insensitive matching, shared purposes, free workstation ordering, unused purposes, distinct visitors, host filtering and empty results. It also verifies that deleting hosts releases workstations and makes their remaining unlinked purposes unused.
+
+The collection uses `baseUrl`, defaulting to `http://localhost:8080`. Test data contains a per-run identifier. The collection covers Parts A, B and C; later requirement requests will be added with their respective parts.
 
 Review PostgreSQL tables for A1: `visit_purpose`, `workstation`, `host_employee`, `host_employee_visit_purpose`, `visitor`, and `visit`. The `visit_note` table belongs to Part E.
 
@@ -120,3 +135,14 @@ Verified on 29 October 2026 against the disposable PostgreSQL 17 database:
 - Repository inspection confirmed B1, B2 and B3 use derived method names only, without `@Query`.
 
 Import the updated collection and run `Part B - Derived queries` in Postman for your review before committing Part B.
+
+## Part C verification
+
+Verified on 29 October 2026 against the disposable PostgreSQL 17 database:
+
+- Maven package build passed.
+- All 48 Part C requests and 107 assertions passed, including fixture setup and cleanup.
+- The complete Parts A, B and C collection passed: 134 requests and 288 assertions through the local Node runner. The Postman desktop application was not used for this run.
+- Repository inspection confirmed all four Part C methods use `@Query` with the required JPQL mechanisms: `JOIN`, `NOT EXISTS`, `IS EMPTY` and `DISTINCT`.
+
+Import the updated collection and run `Part C - JPQL queries` in Postman for your review before committing Part C.
