@@ -4,7 +4,7 @@ Student: NIYOMUGABO Fabrice
 Student ID: 27115  
 Repository name: visitor-management-system-backend
 
-A Spring Boot backend using Spring Data JPA and PostgreSQL. Parts A to F are implemented. The bonus features are pending.
+A Spring Boot backend using Spring Data JPA and PostgreSQL. Parts A to F and both bonus features are implemented.
 
 ## Requirements
 
@@ -144,6 +144,29 @@ Both endpoints return HTTP 200. F1 returns an empty list when there are no visit
 
 F2 uses `@Modifying` on the repository method and `@Transactional` on the service method. It returns the actual affected-row count as plain text, for example `3 visits cancelled` or `0 visits cancelled`. Since CHECKED_OUT is the only excluded status, already-DENIED visits also count as matched rows, including on repeated calls. Other hosts and dates remain unchanged. An unknown host UUID returns `0 visits cancelled`. Invalid UUIDs, invalid dates and missing parameters return HTTP 400 through Spring's default handling.
 
+## Bonus features
+
+`GET /api/dashboard/summary` returns HTTP 200 with a `Map<String, Long>` built using `LinkedHashMap` in DashboardService. Its keys appear in this order:
+
+```json
+{
+  "visitors": 5,
+  "hostEmployees": 3,
+  "freeWorkstations": 1,
+  "visitsToday": 0,
+  "expected": 4,
+  "visitNotes": 6
+}
+```
+
+Counts use repository `count()` methods, derived `countByVisitDate` and `countByStatus`, and the existing C2 query for free workstations. `visitsToday` counts all visits dated today regardless of status. `expected` counts EXPECTED visits across all dates. An empty database returns all six keys with zero values.
+
+`GET /api/visits/page?page=0&size=5&sort=visitDate,desc` returns HTTP 200 with a `Page<Visit>`, including `content`, `totalPages`, `totalElements`, `number` and `size`. The controller constructs `Pageable`; the service calls `findAll(pageable)`.
+
+The defaults are page 0, size 5 and sort `visitDate,desc`. Page numbers start at zero. Sort accepts `id`, `visitDate`, `status` or `purposeNote` followed by `asc` or `desc`, ignoring the direction's case. Equal sort values have no specified order relative to each other. A page beyond the end has empty content and retains the overall totals.
+
+For pagination inputs not specified in the paper, negative pages and sizes below 1 return HTTP 400 with `Page must be 0 or more and size at least 1`. A sort without exactly two comma-separated parts returns `Sort must look like visitDate,desc`. Unsupported properties or directions return `Sort must use id, visitDate, status or purposeNote with asc or desc`. Non-numeric page or size values return HTTP 400 through Spring's default handling.
+
 ## Postman review
 
 Import `visitor-management-system-midterm.postman_collection.json`. Run the `A2 - CRUD` folder in order against a disposable database. It creates related records, captures generated IDs through list requests, verifies reads and updates, tests validation and deletion protection, then deletes its records in dependency order.
@@ -158,7 +181,9 @@ Run the `Part E - Visit notes` folder in order to test all visit statuses, serve
 
 Run the `Part F - Reports and bulk updates` folder in order against a disposable database with no visits. It checks all four status groups, zero-group omission, the real cancellation count, repeated calls, checkout protection, host/date filtering and invalid inputs, then removes its fixtures.
 
-The collection uses `baseUrl`, defaulting to `http://localhost:8080`. Test data contains a per-run identifier. The collection covers Parts A to F; bonus requests will be added with their respective features.
+Run the `Bonus - Dashboard and pagination` folder in order against an empty disposable database. It checks the six dashboard counts and their order, changes to those counts, default and explicit pagination, page boundaries, sorting and invalid parameters. It creates its own fixtures using station numbers 1001 to 1003 and removes them afterward.
+
+The collection uses `baseUrl`, defaulting to `http://localhost:8080`. Test data contains a per-run identifier. The collection covers Parts A to F and both bonus features.
 
 Review PostgreSQL tables for A1: `visit_purpose`, `workstation`, `host_employee`, `host_employee_visit_purpose`, `visitor`, and `visit`. Part E adds the `visit_note` table and its foreign key to `visit`.
 
@@ -239,4 +264,16 @@ Verified on 29 October 2026 against the disposable PostgreSQL 17 database:
 - Verified all four status counts, omission of zero-count statuses, empty reports, real affected-row counts, already-DENIED matches, repeated cancellation, host/date isolation and CHECKED_OUT protection.
 - A focused database-backed check seeded visits in all four statuses for the same host and date. Temporary SQL logging confirmed exactly one UPDATE and no preceding SELECT for cancellation. The count was 3, and the checked-out visit and its note were preserved. All temporary fixtures were removed afterward.
 
-Import the updated collection and run `Part F - Reports and bulk updates` in Postman for your review before committing Part F. Bonus features remain pending.
+Import the updated collection and run `Part F - Reports and bulk updates` in Postman for your review before committing Part F.
+
+## Bonus verification
+
+Verified on 29 October 2026 against the disposable PostgreSQL 17 database:
+
+- Maven package build passed.
+- All 67 bonus requests and 155 assertions passed, including fixture setup and cleanup.
+- The complete collection passed: 418 requests and 899 assertions through the local Node runner. The Postman desktop application was not used for this run.
+- Verified all six dashboard values and their key order, empty counts, and changes after workstation assignment, status changes, note deletion and visit deletion.
+- Verified page totals and content for seven visits, default parameters, ascending and descending dates, another sort property, the final page, a page beyond the end, empty results and invalid inputs.
+
+Import the updated collection and run `Bonus - Dashboard and pagination` in Postman for your review before committing the bonus features.

@@ -10,6 +10,8 @@ import kigali.visitor.visitormanagementsystem.repositories.VisitRepository;
 import kigali.visitor.visitormanagementsystem.repositories.VisitorRepository;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -128,6 +130,10 @@ public class VisitService {
 
     public List<Visit> getAllVisits() {
         return visitRepository.findAll();
+    }
+
+    public Page<Visit> getVisitsPage(Pageable pageable) {
+        return visitRepository.findAll(pageable);
     }
 
     public List<Object[]> getVisitCountsByStatus() {

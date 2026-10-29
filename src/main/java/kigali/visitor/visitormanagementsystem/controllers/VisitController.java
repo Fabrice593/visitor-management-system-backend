@@ -6,6 +6,9 @@ import kigali.visitor.visitormanagementsystem.models.VisitStatus;
 import kigali.visitor.visitormanagementsystem.services.VisitService;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -85,6 +88,33 @@ public class VisitController {
     @GetMapping("/all")
     public List<Visit> getAllVisits() {
         return visitService.getAllVisits();
+    }
+
+    @GetMapping("/page")
+    public ResponseEntity<?> getVisitsPage(@RequestParam(defaultValue = "0") int page,
+                                          @RequestParam(defaultValue = "5") int size,
+                                          @RequestParam(defaultValue = "visitDate,desc") String sort) {
+        if (page < 0 || size < 1) {
+            return new ResponseEntity<>("Page must be 0 or more and size at least 1", HttpStatus.BAD_REQUEST);
+        }
+
+        String[] sortParts = sort.split(",", -1);
+
+        if (sortParts.length != 2) {
+            return new ResponseEntity<>("Sort must look like visitDate,desc", HttpStatus.BAD_REQUEST);
+        }
+
+        String property = sortParts[0].trim();
+        Sort.Direction direction = Sort.Direction.fromOptionalString(sortParts[1].trim()).orElse(null);
+
+        if (!List.of("id", "visitDate", "status", "purposeNote").contains(property) || direction == null) {
+            return new ResponseEntity<>("Sort must use id, visitDate, status or purposeNote with asc or desc",
+                    HttpStatus.BAD_REQUEST);
+        }
+
+        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, property));
+
+        return new ResponseEntity<>(visitService.getVisitsPage(pageable), HttpStatus.OK);
     }
 
     @GetMapping("/stats/by-status")

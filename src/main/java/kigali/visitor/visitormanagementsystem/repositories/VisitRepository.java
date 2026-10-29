@@ -16,6 +16,10 @@ import java.util.UUID;
 @Repository
 public interface VisitRepository extends JpaRepository<Visit, UUID> {
 
+    long countByVisitDate(LocalDate visitDate);
+
+    long countByStatus(VisitStatus status);
+
     @Query("SELECT v.status, COUNT(v) FROM Visit v GROUP BY v.status")
     List<Object[]> countVisitsByStatus();
 

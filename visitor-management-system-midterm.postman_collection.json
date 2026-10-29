@@ -8518,6 +8518,1601 @@
           ]
         }
       ]
+    },
+    {
+      "name": "Bonus - Dashboard and pagination",
+      "description": "Run in order on a disposable database with no records. Checks all dashboard counts, changes to them, pagination and sorting, then cleans up. Uses station numbers 1001 to 1003.",
+      "item": [
+        {
+          "name": "Bonus dashboard - Empty database",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/dashboard/summary"
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set(\"bonusRunId\", pm.variables.replaceIn(\"{{$guid}}\"));",
+                  "for (let offset = 0; offset < 6; offset++) { const date = new Date(); date.setDate(date.getDate() + offset); pm.collectionVariables.set(\"bonusDate\" + offset, date.getFullYear() + \"-\" + String(date.getMonth() + 1).padStart(2, \"0\") + \"-\" + String(date.getDate()).padStart(2, \"0\")); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "const summary = pm.response.json();",
+                  "pm.test(\"Summary keys appear in the required order\", function () { pm.expect(JSON.stringify(Object.keys(summary))).to.eql(JSON.stringify([\"visitors\", \"hostEmployees\", \"freeWorkstations\", \"visitsToday\", \"expected\", \"visitNotes\"])); });",
+                  "pm.test(\"Summary contains the correct numeric counts\", function () { pm.expect(JSON.stringify(Object.values(summary))).to.eql(JSON.stringify([0, 0, 0, 0, 0, 0])); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Bonus pagination - Empty database",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/page"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "const page = pm.response.json();",
+                  "pm.test(\"Page metadata and content size are correct\", function () { pm.expect(page.totalElements).to.eql(0); pm.expect(page.totalPages).to.eql(0); pm.expect(page.number).to.eql(0); pm.expect(page.size).to.eql(5); pm.expect(page.content.length).to.eql(0); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Create workstation 0",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/workstations/save",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"stationNumber\": 1001,\n  \"name\": \"Bonus-Station-0-{{bonusRunId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Workstation saved successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Create workstation 1",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/workstations/save",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"stationNumber\": 1002,\n  \"name\": \"Bonus-Station-1-{{bonusRunId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Workstation saved successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Create workstation 2",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/workstations/save",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"stationNumber\": 1003,\n  \"name\": \"Bonus-Station-2-{{bonusRunId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Workstation saved successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Capture workstations IDs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/workstations/all"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "for (let index = 0; index < 3; index++) { const record = pm.response.json().find(row => row.name === \"Bonus-Station-\" + index + \"-\" + pm.collectionVariables.get(\"bonusRunId\")); pm.test(\"Fixture \" + index + \" exists\", function () { pm.expect(record).to.be.an(\"object\"); }); if (record) pm.collectionVariables.set(\"bonusStation\" + index, record.id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Create host 0",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/host-employees/save",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Bonus\",\n  \"lastName\": \"Host0\",\n  \"email\": \"bonus-0-{{bonusRunId}}@example.com\",\n  \"workstation\": {\n    \"id\": \"{{bonusStation0}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Host employee saved successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Create host 1",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/host-employees/save",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Bonus\",\n  \"lastName\": \"Host1\",\n  \"email\": \"bonus-1-{{bonusRunId}}@example.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Host employee saved successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Capture host-employees IDs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/host-employees/all"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "for (let index = 0; index < 2; index++) { const record = pm.response.json().find(row => row.email === \"bonus-\" + index + \"-\" + pm.collectionVariables.get(\"bonusRunId\") + \"@example.com\"); pm.test(\"Fixture \" + index + \" exists\", function () { pm.expect(record).to.be.an(\"object\"); }); if (record) pm.collectionVariables.set(\"bonusHost\" + index, record.id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Create visitor 0",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/visitors/save",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Bonus\",\n  \"lastName\": \"Visitor0\",\n  \"idNumber\": \"BONUS-0-{{bonusRunId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visitor saved successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Create visitor 1",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/visitors/save",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Bonus\",\n  \"lastName\": \"Visitor1\",\n  \"idNumber\": \"BONUS-1-{{bonusRunId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visitor saved successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Capture visitors IDs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visitors/all"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "for (let index = 0; index < 2; index++) { const record = pm.response.json().find(row => row.idNumber === \"BONUS-\" + index + \"-\" + pm.collectionVariables.get(\"bonusRunId\")); pm.test(\"Fixture \" + index + \" exists\", function () { pm.expect(record).to.be.an(\"object\"); }); if (record) pm.collectionVariables.set(\"bonusVisitor\" + index, record.id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Create visit 0",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/visits/save",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"visitDate\": \"{{bonusDate0}}\",\n  \"purposeNote\": \"Bonus-Visit-0-{{bonusRunId}}\",\n  \"visitor\": {\n    \"id\": \"{{bonusVisitor0}}\"\n  },\n  \"hostEmployee\": {\n    \"id\": \"{{bonusHost0}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit saved successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Create visit 1",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/visits/save",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"visitDate\": \"{{bonusDate0}}\",\n  \"purposeNote\": \"Bonus-Visit-1-{{bonusRunId}}\",\n  \"visitor\": {\n    \"id\": \"{{bonusVisitor1}}\"\n  },\n  \"hostEmployee\": {\n    \"id\": \"{{bonusHost1}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit saved successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Create visit 2",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/visits/save",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"visitDate\": \"{{bonusDate2}}\",\n  \"purposeNote\": \"Bonus-Visit-2-{{bonusRunId}}\",\n  \"visitor\": {\n    \"id\": \"{{bonusVisitor0}}\"\n  },\n  \"hostEmployee\": {\n    \"id\": \"{{bonusHost0}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit saved successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Create visit 3",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/visits/save",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"visitDate\": \"{{bonusDate1}}\",\n  \"purposeNote\": \"Bonus-Visit-3-{{bonusRunId}}\",\n  \"visitor\": {\n    \"id\": \"{{bonusVisitor1}}\"\n  },\n  \"hostEmployee\": {\n    \"id\": \"{{bonusHost0}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit saved successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Create visit 4",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/visits/save",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"visitDate\": \"{{bonusDate3}}\",\n  \"purposeNote\": \"Bonus-Visit-4-{{bonusRunId}}\",\n  \"visitor\": {\n    \"id\": \"{{bonusVisitor0}}\"\n  },\n  \"hostEmployee\": {\n    \"id\": \"{{bonusHost0}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit saved successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Create visit 5",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/visits/save",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"visitDate\": \"{{bonusDate4}}\",\n  \"purposeNote\": \"Bonus-Visit-5-{{bonusRunId}}\",\n  \"visitor\": {\n    \"id\": \"{{bonusVisitor1}}\"\n  },\n  \"hostEmployee\": {\n    \"id\": \"{{bonusHost1}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit saved successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Create visit 6",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/visits/save",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"visitDate\": \"{{bonusDate5}}\",\n  \"purposeNote\": \"Bonus-Visit-6-{{bonusRunId}}\",\n  \"visitor\": {\n    \"id\": \"{{bonusVisitor0}}\"\n  },\n  \"hostEmployee\": {\n    \"id\": \"{{bonusHost0}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit saved successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Capture visits IDs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/all"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "for (let index = 0; index < 7; index++) { const record = pm.response.json().find(row => row.purposeNote === \"Bonus-Visit-\" + index + \"-\" + pm.collectionVariables.get(\"bonusRunId\")); pm.test(\"Fixture \" + index + \" exists\", function () { pm.expect(record).to.be.an(\"object\"); }); if (record) pm.collectionVariables.set(\"bonusVisit\" + index, record.id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Visit 0 to CHECKED_IN",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/{{bonusVisit0}}/status?status=CHECKED_IN"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit status updated successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Visit 0 to CHECKED_OUT",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/{{bonusVisit0}}/status?status=CHECKED_OUT"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit status updated successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Visit 3 to DENIED",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/{{bonusVisit3}}/status?status=DENIED"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit status updated successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Visit 4 to CHECKED_IN",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/{{bonusVisit4}}/status?status=CHECKED_IN"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit status updated successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Save visit note",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/visit-notes/save?visitId={{bonusVisit0}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"badgeType\": \"Guest badge\",\n  \"remarks\": \"Bonus-Note-{{bonusRunId}}\",\n  \"durationMinutes\": 30\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit note saved successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Capture note ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visit-notes/visitor/BONUS-0-{{bonusRunId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "const note = pm.response.json().find(row => row.remarks === \"Bonus-Note-\" + pm.collectionVariables.get(\"bonusRunId\"));",
+                  "pm.test(\"Note fixture exists\", function () { pm.expect(note).to.be.an(\"object\"); });",
+                  "if (note) pm.collectionVariables.set(\"bonusNote\", note.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Bonus dashboard",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/dashboard/summary"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "const summary = pm.response.json();",
+                  "pm.test(\"Summary keys appear in the required order\", function () { pm.expect(JSON.stringify(Object.keys(summary))).to.eql(JSON.stringify([\"visitors\", \"hostEmployees\", \"freeWorkstations\", \"visitsToday\", \"expected\", \"visitNotes\"])); });",
+                  "pm.test(\"Summary contains the correct numeric counts\", function () { pm.expect(JSON.stringify(Object.values(summary))).to.eql(JSON.stringify([2, 2, 2, 2, 4, 1])); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Bonus pagination",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/page?page=0&size=5&sort=visitDate,desc"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "const page = pm.response.json();",
+                  "pm.test(\"Page metadata and content size are correct\", function () { pm.expect(page.totalElements).to.eql(7); pm.expect(page.totalPages).to.eql(2); pm.expect(page.number).to.eql(0); pm.expect(page.size).to.eql(5); pm.expect(page.content.length).to.eql(5); });",
+                  "pm.test(\"First five visits are sorted by date descending\", function () { pm.expect(JSON.stringify(page.content.map(row => row.id))).to.eql(JSON.stringify([6, 5, 4, 2, 3].map(index => pm.collectionVariables.get(\"bonusVisit\" + index)))); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Bonus pagination - Defaults",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/page"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "const page = pm.response.json();",
+                  "pm.test(\"Page metadata and content size are correct\", function () { pm.expect(page.totalElements).to.eql(7); pm.expect(page.totalPages).to.eql(2); pm.expect(page.number).to.eql(0); pm.expect(page.size).to.eql(5); pm.expect(page.content.length).to.eql(5); });",
+                  "pm.test(\"First five visits are sorted by date descending\", function () { pm.expect(JSON.stringify(page.content.map(row => row.id))).to.eql(JSON.stringify([6, 5, 4, 2, 3].map(index => pm.collectionVariables.get(\"bonusVisit\" + index)))); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Bonus pagination - Last page",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/page?page=1&size=5&sort=visitDate,desc"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "const page = pm.response.json();",
+                  "pm.test(\"Page metadata and content size are correct\", function () { pm.expect(page.totalElements).to.eql(7); pm.expect(page.totalPages).to.eql(2); pm.expect(page.number).to.eql(1); pm.expect(page.size).to.eql(5); pm.expect(page.content.length).to.eql(2); });",
+                  "pm.test(\"Final page contains both visits today without duplicates\", function () { pm.expect(JSON.stringify(page.content.map(row => row.id).sort())).to.eql(JSON.stringify([0, 1].map(index => pm.collectionVariables.get(\"bonusVisit\" + index)).sort())); pm.expect(page.last).to.eql(true); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Bonus pagination - Ascending dates",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/page?page=0&size=3&sort=visitDate,asc"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "const page = pm.response.json();",
+                  "pm.test(\"Page metadata and content size are correct\", function () { pm.expect(page.totalElements).to.eql(7); pm.expect(page.totalPages).to.eql(3); pm.expect(page.number).to.eql(0); pm.expect(page.size).to.eql(3); pm.expect(page.content.length).to.eql(3); });",
+                  "pm.test(\"Ascending order includes both visits today then tomorrow\", function () { pm.expect(JSON.stringify(page.content.map(row => row.visitDate))).to.eql(JSON.stringify([0, 0, 1].map(index => pm.collectionVariables.get(\"bonusDate\" + index)))); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Bonus pagination - Different sort property",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/page?page=0&size=7&sort=purposeNote,asc"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "const page = pm.response.json();",
+                  "pm.test(\"Page metadata and content size are correct\", function () { pm.expect(page.totalElements).to.eql(7); pm.expect(page.totalPages).to.eql(1); pm.expect(page.number).to.eql(0); pm.expect(page.size).to.eql(7); pm.expect(page.content.length).to.eql(7); });",
+                  "pm.test(\"Visits can be sorted by purpose note\", function () { pm.expect(JSON.stringify(page.content.map(row => row.id))).to.eql(JSON.stringify([0, 1, 2, 3, 4, 5, 6].map(index => pm.collectionVariables.get(\"bonusVisit\" + index)))); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Bonus pagination - Uppercase direction",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/page?page=0&size=5&sort=visitDate,DESC"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "const page = pm.response.json();",
+                  "pm.test(\"Page metadata and content size are correct\", function () { pm.expect(page.totalElements).to.eql(7); pm.expect(page.totalPages).to.eql(2); pm.expect(page.number).to.eql(0); pm.expect(page.size).to.eql(5); pm.expect(page.content.length).to.eql(5); });",
+                  "pm.test(\"First five visits are sorted by date descending\", function () { pm.expect(JSON.stringify(page.content.map(row => row.id))).to.eql(JSON.stringify([6, 5, 4, 2, 3].map(index => pm.collectionVariables.get(\"bonusVisit\" + index)))); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Bonus pagination - Beyond last page",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/page?page=9&size=5&sort=visitDate,desc"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "const page = pm.response.json();",
+                  "pm.test(\"Page metadata and content size are correct\", function () { pm.expect(page.totalElements).to.eql(7); pm.expect(page.totalPages).to.eql(2); pm.expect(page.number).to.eql(9); pm.expect(page.size).to.eql(5); pm.expect(page.content.length).to.eql(0); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Bonus pagination - Negative page",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/page?page=-1"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Page must be 0 or more and size at least 1\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Bonus pagination - Zero size",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/page?size=0"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Page must be 0 or more and size at least 1\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Bonus pagination - Negative size",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/page?size=-1"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Page must be 0 or more and size at least 1\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Bonus pagination - Missing direction",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/page?sort=visitDate"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Sort must look like visitDate,desc\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Bonus pagination - Too many sort parts",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/page?sort=visitDate,desc,extra"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Sort must look like visitDate,desc\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Bonus pagination - Invalid direction",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/page?sort=visitDate,sideways"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Sort must use id, visitDate, status or purposeNote with asc or desc\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Bonus pagination - Unknown property",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/page?sort=unknown,asc"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Sort must use id, visitDate, status or purposeNote with asc or desc\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Bonus pagination - Empty property",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/page?sort=,desc"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Sort must use id, visitDate, status or purposeNote with asc or desc\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Bonus pagination - Non-numeric page",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/page?page=invalid"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Bonus pagination - Non-numeric size",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/page?size=invalid"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Bonus dashboard - Assign another workstation",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": "{{baseUrl}}/api/host-employees/{{bonusHost1}}/workstation?stationNumber=1003"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Workstation changed successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Bonus dashboard - Free workstation count changes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/dashboard/summary"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "const summary = pm.response.json();",
+                  "pm.test(\"Summary keys appear in the required order\", function () { pm.expect(JSON.stringify(Object.keys(summary))).to.eql(JSON.stringify([\"visitors\", \"hostEmployees\", \"freeWorkstations\", \"visitsToday\", \"expected\", \"visitNotes\"])); });",
+                  "pm.test(\"Summary contains the correct numeric counts\", function () { pm.expect(JSON.stringify(Object.values(summary))).to.eql(JSON.stringify([2, 2, 1, 2, 4, 1])); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Bonus dashboard - Deny an expected visit",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/{{bonusVisit1}}/status?status=DENIED"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit status updated successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Bonus dashboard - Expected count changes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/dashboard/summary"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "const summary = pm.response.json();",
+                  "pm.test(\"Summary keys appear in the required order\", function () { pm.expect(JSON.stringify(Object.keys(summary))).to.eql(JSON.stringify([\"visitors\", \"hostEmployees\", \"freeWorkstations\", \"visitsToday\", \"expected\", \"visitNotes\"])); });",
+                  "pm.test(\"Summary contains the correct numeric counts\", function () { pm.expect(JSON.stringify(Object.values(summary))).to.eql(JSON.stringify([2, 2, 1, 2, 3, 1])); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Bonus dashboard - Delete note",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/visit-notes/delete/{{bonusNote}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit note deleted successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Bonus dashboard - Note count changes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/dashboard/summary"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "const summary = pm.response.json();",
+                  "pm.test(\"Summary keys appear in the required order\", function () { pm.expect(JSON.stringify(Object.keys(summary))).to.eql(JSON.stringify([\"visitors\", \"hostEmployees\", \"freeWorkstations\", \"visitsToday\", \"expected\", \"visitNotes\"])); });",
+                  "pm.test(\"Summary contains the correct numeric counts\", function () { pm.expect(JSON.stringify(Object.values(summary))).to.eql(JSON.stringify([2, 2, 1, 2, 3, 0])); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Bonus dashboard - Delete a visit today",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/delete/{{bonusVisit0}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit deleted successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Bonus dashboard - Today count changes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/dashboard/summary"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "const summary = pm.response.json();",
+                  "pm.test(\"Summary keys appear in the required order\", function () { pm.expect(JSON.stringify(Object.keys(summary))).to.eql(JSON.stringify([\"visitors\", \"hostEmployees\", \"freeWorkstations\", \"visitsToday\", \"expected\", \"visitNotes\"])); });",
+                  "pm.test(\"Summary contains the correct numeric counts\", function () { pm.expect(JSON.stringify(Object.values(summary))).to.eql(JSON.stringify([2, 2, 1, 1, 3, 0])); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cleanup - Delete visits fixture 1",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/delete/{{bonusVisit1}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit deleted successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cleanup - Delete visits fixture 2",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/delete/{{bonusVisit2}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit deleted successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cleanup - Delete visits fixture 3",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/delete/{{bonusVisit3}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit deleted successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cleanup - Delete visits fixture 4",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/delete/{{bonusVisit4}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit deleted successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cleanup - Delete visits fixture 5",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/delete/{{bonusVisit5}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit deleted successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cleanup - Delete visits fixture 6",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/delete/{{bonusVisit6}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit deleted successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cleanup - Delete host-employees fixture 0",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/host-employees/delete/{{bonusHost0}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Host employee deleted successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cleanup - Delete host-employees fixture 1",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/host-employees/delete/{{bonusHost1}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Host employee deleted successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cleanup - Delete visitors fixture 0",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/visitors/delete/{{bonusVisitor0}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visitor deleted successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cleanup - Delete visitors fixture 1",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/visitors/delete/{{bonusVisitor1}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visitor deleted successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cleanup - Delete workstations fixture 0",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/workstations/delete/{{bonusStation0}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Workstation deleted successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cleanup - Delete workstations fixture 1",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/workstations/delete/{{bonusStation1}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Workstation deleted successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cleanup - Delete workstations fixture 2",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/workstations/delete/{{bonusStation2}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Workstation deleted successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Bonus dashboard - Empty after cleanup",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/dashboard/summary"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "const summary = pm.response.json();",
+                  "pm.test(\"Summary keys appear in the required order\", function () { pm.expect(JSON.stringify(Object.keys(summary))).to.eql(JSON.stringify([\"visitors\", \"hostEmployees\", \"freeWorkstations\", \"visitsToday\", \"expected\", \"visitNotes\"])); });",
+                  "pm.test(\"Summary contains the correct numeric counts\", function () { pm.expect(JSON.stringify(Object.values(summary))).to.eql(JSON.stringify([0, 0, 0, 0, 0, 0])); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Bonus pagination - Empty after cleanup",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/page"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "const page = pm.response.json();",
+                  "pm.test(\"Page metadata and content size are correct\", function () { pm.expect(page.totalElements).to.eql(0); pm.expect(page.totalPages).to.eql(0); pm.expect(page.number).to.eql(0); pm.expect(page.size).to.eql(5); pm.expect(page.content.length).to.eql(0); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
     }
   ]
 }
