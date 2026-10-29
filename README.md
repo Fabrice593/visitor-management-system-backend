@@ -4,7 +4,7 @@ Student: NIYOMUGABO Fabrice
 Student ID: 27115  
 Repository name: visitor-management-system-backend
 
-A Spring Boot backend using Spring Data JPA and PostgreSQL. Parts A to D are implemented. Parts E, F and the bonus features are pending.
+A Spring Boot backend using Spring Data JPA and PostgreSQL. Parts A to E are implemented. Part F and the bonus features are pending.
 
 ## Requirements
 
@@ -117,6 +117,22 @@ Missing visits, hosts and purposes return their existing 404 messages. Where the
 
 Ordinary Visit PUT requests cannot change status. When a non-DENIED visit changes host or date, its new schedule is checked for past dates and conflicts, excluding its own record. An unchanged schedule does not conflict with itself. Host creation and ordinary HostEmployee updates also check workstation occupancy so they cannot bypass the move rule.
 
+## Part E visit notes
+
+`VisitNote` is stored in `visit_note` with a generated UUID, `badgeType`, `remarks`, `durationMinutes`, `loggedDate` and a many-to-one `visit` relationship using `visit_id`.
+
+| ID | Endpoint | Behavior |
+| --- | --- | --- |
+| E1 | `POST /api/visit-notes/save?visitId=...` | Saves a note only when the visit is CHECKED_OUT. The service generates the ID, sets today's logged date and links the visit supplied by the query parameter. |
+| E2 | `GET /api/visit-notes/visitor/{idNumber}` | Returns notes across all visits of that visitor, newest logged date first, using JPQL path navigation and `ORDER BY`. |
+| E3 | `DELETE /api/visit-notes/delete/{id}` | Deletes a note. Visit deletion checks the derived `existsByVisit` method and rejects visits that still have notes. |
+
+E1 returns 201 with `Visit note saved successfully`, 404 with `The visit with that id does not exist`, or 400 with `Visit notes are only for CHECKED_OUT visits`. Client-supplied note IDs, dates and visit relationships are overwritten by the service.
+
+E2 returns HTTP 200 with an empty list when no notes match, including unknown visitor ID numbers. The JSON includes the note's visit, visitor and host employee without adding a note list to Visit. Notes with the same logged date have no specified order relative to each other.
+
+E3 returns 200 with `Visit note deleted successfully` or 404 with `The visit note with that id does not exist`. A visit with notes returns 409 with `That visit has visit notes, delete them first`. Deleting one note does not remove its visit or other notes. Once the final note is deleted, the visit can be deleted.
+
 ## Postman review
 
 Import `visitor-management-system-midterm.postman_collection.json`. Run the `A2 - CRUD` folder in order against a disposable database. It creates related records, captures generated IDs through list requests, verifies reads and updates, tests validation and deletion protection, then deletes its records in dependency order.
@@ -127,9 +143,11 @@ Run the `Part C - JPQL queries` folder in order to create its fixtures, verify C
 
 Run the `Part D - Business rules` folder in order to test all 16 status transition pairs, forced initial status, past dates, host booking conflicts, ordinary update protection, purpose linking and workstation moves. It creates its own fixtures and removes them afterward. Use a disposable database with station numbers 901 to 903 available. The Part B fixture now changes its denied visit through the D2 endpoint instead of supplying the initial status.
 
-The collection uses `baseUrl`, defaulting to `http://localhost:8080`. Test data contains a per-run identifier. The collection covers Parts A to D; later requirement requests will be added with their respective parts.
+Run the `Part E - Visit notes` folder in order to test all visit statuses, server-owned note fields, history across visits, visitor isolation and deletion protection while multiple notes remain. It creates its fixtures and removes them afterward. Notes created through the API on the same day share their logged date.
 
-Review PostgreSQL tables for A1: `visit_purpose`, `workstation`, `host_employee`, `host_employee_visit_purpose`, `visitor`, and `visit`. The `visit_note` table belongs to Part E.
+The collection uses `baseUrl`, defaulting to `http://localhost:8080`. Test data contains a per-run identifier. The collection covers Parts A to E; later requirement requests will be added with their respective parts.
+
+Review PostgreSQL tables for A1: `visit_purpose`, `workstation`, `host_employee`, `host_employee_visit_purpose`, `visitor`, and `visit`. Part E adds the `visit_note` table and its foreign key to `visit`.
 
 ## Structure
 
@@ -184,3 +202,16 @@ Verified on 29 October 2026 against the disposable PostgreSQL 17 database:
 - The Part B folder now has 36 requests because its DENIED fixture uses the new status endpoint.
 
 Import the updated collection and run `Part D - Business rules` in Postman for your review before committing Part D.
+
+## Part E verification
+
+Verified on 29 October 2026 against the disposable PostgreSQL 17 database:
+
+- Maven package build passed.
+- All 52 Part E requests and 125 assertions passed, including fixture setup and cleanup.
+- The full Parts A to E collection passed: 297 requests and 636 assertions through the local Node runner. The Postman desktop application was not used for this run.
+- A separate database-backed check seeded three different logged dates across two visits and verified that E2 returned newest first. Those temporary fixtures were removed afterward.
+- PostgreSQL inspection confirmed all six visit_note columns, its UUID primary key and its visit_id foreign key.
+- Tested note rejection for EXPECTED, CHECKED_IN and DENIED visits, forced server date and visit linkage, generated note IDs, multiple notes per visit, history across visits, visitor isolation and deletion protection until the final note is removed.
+
+Import the updated collection and run `Part E - Visit notes` in Postman for your review before committing Part E.

@@ -5,6 +5,7 @@ import kigali.visitor.visitormanagementsystem.models.Visit;
 import kigali.visitor.visitormanagementsystem.models.VisitStatus;
 import kigali.visitor.visitormanagementsystem.models.Visitor;
 import kigali.visitor.visitormanagementsystem.repositories.HostEmployeeRepository;
+import kigali.visitor.visitormanagementsystem.repositories.VisitNoteRepository;
 import kigali.visitor.visitormanagementsystem.repositories.VisitRepository;
 import kigali.visitor.visitormanagementsystem.repositories.VisitorRepository;
 
@@ -28,6 +29,9 @@ public class VisitService {
 
     @Autowired
     private HostEmployeeRepository hostEmployeeRepository;
+
+    @Autowired
+    private VisitNoteRepository visitNoteRepository;
 
     @Transactional
     public String saveVisit(Visit visit) {
@@ -145,6 +149,10 @@ public class VisitService {
 
         if (existing == null) {
             return "The visit with that id does not exist";
+        }
+
+        if (visitNoteRepository.existsByVisit(existing)) {
+            return "That visit has visit notes, delete them first";
         }
 
         visitRepository.delete(existing);

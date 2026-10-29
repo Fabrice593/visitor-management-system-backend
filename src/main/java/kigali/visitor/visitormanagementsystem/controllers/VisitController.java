@@ -74,6 +74,8 @@ public class VisitController {
             return new ResponseEntity<>(message, HttpStatus.OK);
         } else if (message.endsWith("does not exist")) {
             return new ResponseEntity<>(message, HttpStatus.NOT_FOUND);
+        } else if (message.equals("That visit has visit notes, delete them first")) {
+            return new ResponseEntity<>(message, HttpStatus.CONFLICT);
         } else {
             return new ResponseEntity<>(message, HttpStatus.BAD_REQUEST);
         }

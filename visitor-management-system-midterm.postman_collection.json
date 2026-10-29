@@ -5947,6 +5947,1338 @@
           ]
         }
       ]
+    },
+    {
+      "name": "Part E - Visit notes",
+      "description": "Run in order against a disposable database. Creates fixtures, tests E1 to E3, then removes its records. API-created notes share today as their logged date.",
+      "item": [
+        {
+          "name": "Setup - Create host",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/host-employees/save",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"PartE\",\n  \"lastName\": \"Host\",\n  \"email\": \"parte-{{eRunId}}@example.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set(\"eRunId\", pm.variables.replaceIn(\"{{$guid}}\"));",
+                  "pm.collectionVariables.set(\"eMissingId\", pm.variables.replaceIn(\"{{$guid}}\"));",
+                  "const today = new Date(); pm.collectionVariables.set(\"eToday\", today.getFullYear() + \"-\" + String(today.getMonth() + 1).padStart(2, \"0\") + \"-\" + String(today.getDate()).padStart(2, \"0\"));",
+                  "for (let offset = 0; offset < 4; offset++) { const date = new Date(); date.setDate(date.getDate() + 30 + offset); pm.collectionVariables.set(\"eDate\" + offset, date.getFullYear() + \"-\" + String(date.getMonth() + 1).padStart(2, \"0\") + \"-\" + String(date.getDate()).padStart(2, \"0\")); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Host employee saved successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Capture host-employees IDs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/host-employees/all"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "for (let index = 0; index < 1; index++) { const record = pm.response.json().find(row => row.email === \"parte-\" + pm.collectionVariables.get(\"eRunId\") + \"@example.com\"); pm.test(\"Fixture \" + index + \" exists\", function () { pm.expect(record).to.be.an(\"object\"); }); if (record) pm.collectionVariables.set(\"eHost\" + index, record.id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Create visitor 0",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/visitors/save",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"PartE\",\n  \"lastName\": \"Visitor0\",\n  \"idNumber\": \"E-0-{{eRunId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visitor saved successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Create visitor 1",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/visitors/save",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"PartE\",\n  \"lastName\": \"Visitor1\",\n  \"idNumber\": \"E-1-{{eRunId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visitor saved successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Capture visitors IDs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visitors/all"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "for (let index = 0; index < 2; index++) { const record = pm.response.json().find(row => row.idNumber === \"E-\" + index + \"-\" + pm.collectionVariables.get(\"eRunId\")); pm.test(\"Fixture \" + index + \" exists\", function () { pm.expect(record).to.be.an(\"object\"); }); if (record) pm.collectionVariables.set(\"eVisitor\" + index, record.id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "E2 - Existing visitor without notes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visit-notes/visitor/E-0-{{eRunId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "const rows = pm.response.json();",
+                  "pm.test(\"Expected number of notes\", function () { pm.expect(rows.length).to.eql(0); });",
+                  "pm.test(\"Only the requested visitor is included\", function () { pm.expect(rows.every(row => row.visit.visitor.id === pm.collectionVariables.get(\"eVisitor0\"))).to.eql(true); });",
+                  "pm.test(\"Newest logged date first\", function () { const dates = rows.map(row => row.loggedDate); pm.expect(JSON.stringify(dates)).to.eql(JSON.stringify([...dates].sort().reverse())); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Create visit 0",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/visits/save",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"visitDate\": \"{{eDate0}}\",\n  \"purposeNote\": \"PartE-Visit-0-{{eRunId}}\",\n  \"visitor\": {\n    \"id\": \"{{eVisitor0}}\"\n  },\n  \"hostEmployee\": {\n    \"id\": \"{{eHost0}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit saved successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Create visit 1",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/visits/save",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"visitDate\": \"{{eDate1}}\",\n  \"purposeNote\": \"PartE-Visit-1-{{eRunId}}\",\n  \"visitor\": {\n    \"id\": \"{{eVisitor0}}\"\n  },\n  \"hostEmployee\": {\n    \"id\": \"{{eHost0}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit saved successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Create visit 2",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/visits/save",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"visitDate\": \"{{eDate2}}\",\n  \"purposeNote\": \"PartE-Visit-2-{{eRunId}}\",\n  \"visitor\": {\n    \"id\": \"{{eVisitor0}}\"\n  },\n  \"hostEmployee\": {\n    \"id\": \"{{eHost0}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit saved successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Create visit 3",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/visits/save",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"visitDate\": \"{{eDate3}}\",\n  \"purposeNote\": \"PartE-Visit-3-{{eRunId}}\",\n  \"visitor\": {\n    \"id\": \"{{eVisitor1}}\"\n  },\n  \"hostEmployee\": {\n    \"id\": \"{{eHost0}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit saved successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Capture visits IDs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/all"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "for (let index = 0; index < 4; index++) { const record = pm.response.json().find(row => row.purposeNote === \"PartE-Visit-\" + index + \"-\" + pm.collectionVariables.get(\"eRunId\")); pm.test(\"Fixture \" + index + \" exists\", function () { pm.expect(record).to.be.an(\"object\"); }); if (record) pm.collectionVariables.set(\"eVisit\" + index, record.id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "E1 - Unknown visit",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/visit-notes/save?visitId={{eMissingId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"badgeType\": \"Guest badge\",\n  \"remarks\": \"PartE-Note-99-{{eRunId}}\",\n  \"durationMinutes\": 144\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 404\", function () { pm.response.to.have.status(404); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"The visit with that id does not exist\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "E1 - Visit ID required",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/visit-notes/save",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"badgeType\": \"Guest badge\",\n  \"remarks\": \"PartE-Note-99-{{eRunId}}\",\n  \"durationMinutes\": 144\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "E1 - Invalid visit ID",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/visit-notes/save?visitId=invalid",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"badgeType\": \"Guest badge\",\n  \"remarks\": \"PartE-Note-99-{{eRunId}}\",\n  \"durationMinutes\": 144\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "E1 - EXPECTED rejected",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/visit-notes/save?visitId={{eVisit0}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"badgeType\": \"Guest badge\",\n  \"remarks\": \"PartE-Note-99-{{eRunId}}\",\n  \"durationMinutes\": 144\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit notes are only for CHECKED_OUT visits\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Visit 0 to CHECKED_IN",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/{{eVisit0}}/status?status=CHECKED_IN"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit status updated successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "E1 - CHECKED_IN rejected",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/visit-notes/save?visitId={{eVisit0}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"badgeType\": \"Guest badge\",\n  \"remarks\": \"PartE-Note-99-{{eRunId}}\",\n  \"durationMinutes\": 144\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit notes are only for CHECKED_OUT visits\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Visit 1 to DENIED",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/{{eVisit1}}/status?status=DENIED"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit status updated successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "E1 - DENIED rejected",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/visit-notes/save?visitId={{eVisit1}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"badgeType\": \"Guest badge\",\n  \"remarks\": \"PartE-Note-99-{{eRunId}}\",\n  \"durationMinutes\": 144\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit notes are only for CHECKED_OUT visits\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "E1 - Rejected saves created no notes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visit-notes/visitor/E-0-{{eRunId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "const rows = pm.response.json();",
+                  "pm.test(\"Expected number of notes\", function () { pm.expect(rows.length).to.eql(0); });",
+                  "pm.test(\"Only the requested visitor is included\", function () { pm.expect(rows.every(row => row.visit.visitor.id === pm.collectionVariables.get(\"eVisitor0\"))).to.eql(true); });",
+                  "pm.test(\"Newest logged date first\", function () { const dates = rows.map(row => row.loggedDate); pm.expect(JSON.stringify(dates)).to.eql(JSON.stringify([...dates].sort().reverse())); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Visit 0 to CHECKED_OUT",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/{{eVisit0}}/status?status=CHECKED_OUT"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit status updated successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "E1",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/visit-notes/save?visitId={{eVisit0}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"badgeType\": \"Guest badge\",\n  \"remarks\": \"PartE-Note-0-{{eRunId}}\",\n  \"durationMinutes\": 45,\n  \"id\": \"{{eMissingId}}\",\n  \"loggedDate\": \"1900-01-01\",\n  \"visit\": {\n    \"id\": \"{{eVisit1}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit note saved successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "E1 - Server sets ID date and visit",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visit-notes/visitor/E-0-{{eRunId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "const rows = pm.response.json();",
+                  "pm.test(\"Expected number of notes\", function () { pm.expect(rows.length).to.eql(1); });",
+                  "pm.test(\"Only the requested visitor is included\", function () { pm.expect(rows.every(row => row.visit.visitor.id === pm.collectionVariables.get(\"eVisitor0\"))).to.eql(true); });",
+                  "pm.test(\"Newest logged date first\", function () { const dates = rows.map(row => row.loggedDate); pm.expect(JSON.stringify(dates)).to.eql(JSON.stringify([...dates].sort().reverse())); });",
+                  "const note0 = rows.find(row => row.remarks === \"PartE-Note-0-\" + pm.collectionVariables.get(\"eRunId\"));",
+                  "pm.test(\"Note 0 has server-owned fields and expected content\", function () { pm.expect(note0).to.be.an(\"object\"); pm.expect(note0.badgeType).to.eql(\"Guest badge\"); pm.expect(note0.durationMinutes).to.eql(45); pm.expect(note0.loggedDate).to.eql(pm.collectionVariables.get(\"eToday\")); pm.expect(note0.visit.id).to.eql(pm.collectionVariables.get(\"eVisit0\")); pm.expect(note0.visit.hostEmployee.id).to.eql(pm.collectionVariables.get(\"eHost0\")); pm.expect(note0.visit.status).to.eql(\"CHECKED_OUT\"); pm.expect(note0.id).not.to.eql(pm.collectionVariables.get(\"eMissingId\")); pm.expect(note0.id).to.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i); });",
+                  "if (note0) pm.collectionVariables.set(\"eNote0\", note0.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "E1 - Multiple notes per visit",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/visit-notes/save?visitId={{eVisit0}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"badgeType\": \"Guest badge\",\n  \"remarks\": \"PartE-Note-1-{{eRunId}}\",\n  \"durationMinutes\": 46\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit note saved successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Visit 2 to CHECKED_IN",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/{{eVisit2}}/status?status=CHECKED_IN"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit status updated successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Visit 2 to CHECKED_OUT",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/{{eVisit2}}/status?status=CHECKED_OUT"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit status updated successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "E1 - Another visit of same visitor",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/visit-notes/save?visitId={{eVisit2}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"badgeType\": \"Guest badge\",\n  \"remarks\": \"PartE-Note-2-{{eRunId}}\",\n  \"durationMinutes\": 47\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit note saved successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Visit 3 to CHECKED_IN",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/{{eVisit3}}/status?status=CHECKED_IN"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit status updated successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup - Visit 3 to CHECKED_OUT",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/{{eVisit3}}/status?status=CHECKED_OUT"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit status updated successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "E1 - Note for another visitor",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/visit-notes/save?visitId={{eVisit3}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"badgeType\": \"Guest badge\",\n  \"remarks\": \"PartE-Note-3-{{eRunId}}\",\n  \"durationMinutes\": 48\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit note saved successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "E2",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visit-notes/visitor/E-0-{{eRunId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "const rows = pm.response.json();",
+                  "pm.test(\"Expected number of notes\", function () { pm.expect(rows.length).to.eql(3); });",
+                  "pm.test(\"Only the requested visitor is included\", function () { pm.expect(rows.every(row => row.visit.visitor.id === pm.collectionVariables.get(\"eVisitor0\"))).to.eql(true); });",
+                  "pm.test(\"Newest logged date first\", function () { const dates = rows.map(row => row.loggedDate); pm.expect(JSON.stringify(dates)).to.eql(JSON.stringify([...dates].sort().reverse())); });",
+                  "const note0 = rows.find(row => row.remarks === \"PartE-Note-0-\" + pm.collectionVariables.get(\"eRunId\"));",
+                  "pm.test(\"Note 0 has server-owned fields and expected content\", function () { pm.expect(note0).to.be.an(\"object\"); pm.expect(note0.badgeType).to.eql(\"Guest badge\"); pm.expect(note0.durationMinutes).to.eql(45); pm.expect(note0.loggedDate).to.eql(pm.collectionVariables.get(\"eToday\")); pm.expect(note0.visit.id).to.eql(pm.collectionVariables.get(\"eVisit0\")); pm.expect(note0.visit.hostEmployee.id).to.eql(pm.collectionVariables.get(\"eHost0\")); pm.expect(note0.visit.status).to.eql(\"CHECKED_OUT\"); pm.expect(note0.id).not.to.eql(pm.collectionVariables.get(\"eMissingId\")); pm.expect(note0.id).to.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i); });",
+                  "if (note0) pm.collectionVariables.set(\"eNote0\", note0.id);",
+                  "const note1 = rows.find(row => row.remarks === \"PartE-Note-1-\" + pm.collectionVariables.get(\"eRunId\"));",
+                  "pm.test(\"Note 1 has server-owned fields and expected content\", function () { pm.expect(note1).to.be.an(\"object\"); pm.expect(note1.badgeType).to.eql(\"Guest badge\"); pm.expect(note1.durationMinutes).to.eql(46); pm.expect(note1.loggedDate).to.eql(pm.collectionVariables.get(\"eToday\")); pm.expect(note1.visit.id).to.eql(pm.collectionVariables.get(\"eVisit0\")); pm.expect(note1.visit.hostEmployee.id).to.eql(pm.collectionVariables.get(\"eHost0\")); pm.expect(note1.visit.status).to.eql(\"CHECKED_OUT\"); pm.expect(note1.id).not.to.eql(pm.collectionVariables.get(\"eMissingId\")); pm.expect(note1.id).to.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i); });",
+                  "if (note1) pm.collectionVariables.set(\"eNote1\", note1.id);",
+                  "const note2 = rows.find(row => row.remarks === \"PartE-Note-2-\" + pm.collectionVariables.get(\"eRunId\"));",
+                  "pm.test(\"Note 2 has server-owned fields and expected content\", function () { pm.expect(note2).to.be.an(\"object\"); pm.expect(note2.badgeType).to.eql(\"Guest badge\"); pm.expect(note2.durationMinutes).to.eql(47); pm.expect(note2.loggedDate).to.eql(pm.collectionVariables.get(\"eToday\")); pm.expect(note2.visit.id).to.eql(pm.collectionVariables.get(\"eVisit2\")); pm.expect(note2.visit.hostEmployee.id).to.eql(pm.collectionVariables.get(\"eHost0\")); pm.expect(note2.visit.status).to.eql(\"CHECKED_OUT\"); pm.expect(note2.id).not.to.eql(pm.collectionVariables.get(\"eMissingId\")); pm.expect(note2.id).to.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i); });",
+                  "if (note2) pm.collectionVariables.set(\"eNote2\", note2.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "E2 - Other visitor is isolated",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visit-notes/visitor/E-1-{{eRunId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "const rows = pm.response.json();",
+                  "pm.test(\"Expected number of notes\", function () { pm.expect(rows.length).to.eql(1); });",
+                  "pm.test(\"Only the requested visitor is included\", function () { pm.expect(rows.every(row => row.visit.visitor.id === pm.collectionVariables.get(\"eVisitor1\"))).to.eql(true); });",
+                  "pm.test(\"Newest logged date first\", function () { const dates = rows.map(row => row.loggedDate); pm.expect(JSON.stringify(dates)).to.eql(JSON.stringify([...dates].sort().reverse())); });",
+                  "const note3 = rows.find(row => row.remarks === \"PartE-Note-3-\" + pm.collectionVariables.get(\"eRunId\"));",
+                  "pm.test(\"Note 3 has server-owned fields and expected content\", function () { pm.expect(note3).to.be.an(\"object\"); pm.expect(note3.badgeType).to.eql(\"Guest badge\"); pm.expect(note3.durationMinutes).to.eql(48); pm.expect(note3.loggedDate).to.eql(pm.collectionVariables.get(\"eToday\")); pm.expect(note3.visit.id).to.eql(pm.collectionVariables.get(\"eVisit3\")); pm.expect(note3.visit.hostEmployee.id).to.eql(pm.collectionVariables.get(\"eHost0\")); pm.expect(note3.visit.status).to.eql(\"CHECKED_OUT\"); pm.expect(note3.id).not.to.eql(pm.collectionVariables.get(\"eMissingId\")); pm.expect(note3.id).to.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i); });",
+                  "if (note3) pm.collectionVariables.set(\"eNote3\", note3.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "E2 - Unknown visitor",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visit-notes/visitor/Unknown-{{eRunId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Unknown visitor returns an empty list\", function () { pm.expect(JSON.stringify(pm.response.json())).to.eql(\"[]\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "E3 - Visit with notes is protected",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/delete/{{eVisit0}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 409\", function () { pm.response.to.have.status(409); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"That visit has visit notes, delete them first\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "E3 - Rejected deletion preserves visit",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/{{eVisit0}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Original visit is retained\", function () { pm.expect(pm.response.json().id).to.eql(pm.collectionVariables.get(\"eVisit0\")); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "E3",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/visit-notes/delete/{{eNote0}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit note deleted successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "E3 - Deleted note cannot be deleted twice",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/visit-notes/delete/{{eNote0}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 404\", function () { pm.response.to.have.status(404); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"The visit note with that id does not exist\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "E3 - Visit remains protected while one note remains",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/delete/{{eVisit0}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 409\", function () { pm.response.to.have.status(409); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"That visit has visit notes, delete them first\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "E3 - Delete final note on first visit",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/visit-notes/delete/{{eNote1}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit note deleted successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "E3 - Visit can now be deleted",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/delete/{{eVisit0}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit deleted successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "E3 - Other visit history is retained",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visit-notes/visitor/E-0-{{eRunId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "const rows = pm.response.json();",
+                  "pm.test(\"Expected number of notes\", function () { pm.expect(rows.length).to.eql(1); });",
+                  "pm.test(\"Only the requested visitor is included\", function () { pm.expect(rows.every(row => row.visit.visitor.id === pm.collectionVariables.get(\"eVisitor0\"))).to.eql(true); });",
+                  "pm.test(\"Newest logged date first\", function () { const dates = rows.map(row => row.loggedDate); pm.expect(JSON.stringify(dates)).to.eql(JSON.stringify([...dates].sort().reverse())); });",
+                  "const note2 = rows.find(row => row.remarks === \"PartE-Note-2-\" + pm.collectionVariables.get(\"eRunId\"));",
+                  "pm.test(\"Note 2 has server-owned fields and expected content\", function () { pm.expect(note2).to.be.an(\"object\"); pm.expect(note2.badgeType).to.eql(\"Guest badge\"); pm.expect(note2.durationMinutes).to.eql(47); pm.expect(note2.loggedDate).to.eql(pm.collectionVariables.get(\"eToday\")); pm.expect(note2.visit.id).to.eql(pm.collectionVariables.get(\"eVisit2\")); pm.expect(note2.visit.hostEmployee.id).to.eql(pm.collectionVariables.get(\"eHost0\")); pm.expect(note2.visit.status).to.eql(\"CHECKED_OUT\"); pm.expect(note2.id).not.to.eql(pm.collectionVariables.get(\"eMissingId\")); pm.expect(note2.id).to.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i); });",
+                  "if (note2) pm.collectionVariables.set(\"eNote2\", note2.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "E3 - Unknown note",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/visit-notes/delete/{{eMissingId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 404\", function () { pm.response.to.have.status(404); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"The visit note with that id does not exist\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "E3 - Invalid note ID",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/visit-notes/delete/invalid"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cleanup - Delete note 2",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/visit-notes/delete/{{eNote2}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit note deleted successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cleanup - Delete note 3",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/visit-notes/delete/{{eNote3}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit note deleted successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "E2 - History empty after deleting all notes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/visit-notes/visitor/E-0-{{eRunId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "const rows = pm.response.json();",
+                  "pm.test(\"Expected number of notes\", function () { pm.expect(rows.length).to.eql(0); });",
+                  "pm.test(\"Only the requested visitor is included\", function () { pm.expect(rows.every(row => row.visit.visitor.id === pm.collectionVariables.get(\"eVisitor0\"))).to.eql(true); });",
+                  "pm.test(\"Newest logged date first\", function () { const dates = rows.map(row => row.loggedDate); pm.expect(JSON.stringify(dates)).to.eql(JSON.stringify([...dates].sort().reverse())); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cleanup - Delete visit 1",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/delete/{{eVisit1}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit deleted successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cleanup - Delete visit 2",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/delete/{{eVisit2}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit deleted successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cleanup - Delete visit 3",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/visits/delete/{{eVisit3}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visit deleted successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cleanup - Delete host",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/host-employees/delete/{{eHost0}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Host employee deleted successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cleanup - Delete visitor 0",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/visitors/delete/{{eVisitor0}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visitor deleted successfully\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cleanup - Delete visitor 1",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/visitors/delete/{{eVisitor1}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Exact message\", function () { pm.expect(pm.response.text()).to.eql(\"Visitor deleted successfully\"); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
     }
   ]
 }
